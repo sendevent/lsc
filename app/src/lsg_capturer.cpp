@@ -7,6 +7,11 @@
 #include <QTime>
 #include <QDebug>
 
+#if QT_VERSION >= 0x050000
+#include <QWindow>
+#include <QScreen>
+#endif
+
 QString now()
 {
     return QTime::currentTime().toString( "hh:mm:ss:zzz" );
@@ -16,22 +21,16 @@ LSGCapturer::LSGCapturer( QObject *pParent /*= 0*/ )
     :QObject( pParent )
     ,mMaxCaptures( 0 )
     ,mCurrentCapturedNum( 0 )
-    ,mCapturingDelay( 250 )
-    ,mScreenNumber( 0 )
+    ,mCapturingDelay( 10 )
     ,mAreaSelector( 0 )
     ,mGIFSaver( new LGSGifSaver() )
+    ,mSelectedAreaNum( 0 )
 {
-    QWidget *mainWnd = qobject_cast<QWidget*>( pParent );
-    //-- must be ok!
-//    if( mainWnd )
-//    {
-        pMainWnd = mainWnd;
-    //}
-    
-    qDebug() << now() <<  Q_FUNC_INFO;
-    
-    connect( mGIFSaver, SIGNAL(savingProgress(int, int)),
-             this, SIGNAL(savingProgress(int, int)));
+    connect( mGIFSaver, SIGNAL(savingProgress(int, int, QString)),
+             this, SIGNAL(savingProgress(int, int, QString)));
+
+    connect( &mTimer, SIGNAL(timeout()),
+             this, SLOT(onTimerFired()) );
 }
 
 LSGCapturer::~LSGCapturer()
@@ -41,7 +40,6 @@ LSGCapturer::~LSGCapturer()
 
 QPixmapPtr LSGCapturer::getCapture( int num /*= -1*/ )
 {
-    qDebug() << now() <<  Q_FUNC_INFO;
     QPixmapPtr res;
     if( images.isEmpty() 
             || num >= images.size() )
@@ -59,7 +57,7 @@ QPixmapPtr LSGCapturer::getCapture( int num /*= -1*/ )
     return res;
 }
 
-void LSGCapturer::setAreaSelector( LSGCapturingAreaPlugin *areaSelector )
+void LSGCapturer::setAreaSelector( const LSGCapturingAreaPlugin *areaSelector, int option )
 {
     if( !areaSelector )
     {
@@ -68,10 +66,15 @@ void LSGCapturer::setAreaSelector( LSGCapturingAreaPlugin *areaSelector )
     }
     
     mAreaSelector = areaSelector;
-    //mCapturingPath = areaSelector->getArea();
-    //mCapturingRect = mCapturingPath.boundingRect();
+    mSelectedAreaNum = option;
     images.clear();
     mCurrentCapturedNum = 0;
+}
+
+void LSGCapturer::onTimerFired()
+{
+
+    doGrab();
 }
 
 QPixmapPtr LSGCapturer::startGrab()
@@ -80,57 +83,37 @@ QPixmapPtr LSGCapturer::startGrab()
     
     images.clear();
     mCurrentCapturedNum = 0;
+
+    mTimer.start( mCapturingDelay );
     
     return doGrab();
 }
 
 QPixmapPtr LSGCapturer::doGrab()
 {
-    qDebug() << now() <<  Q_FUNC_INFO << mCurrentCapturedNum;
-    
     ++mCurrentCapturedNum;
     
     QPixmapPtr pImg = shotScreen();
     
-    
-    
     if( pImg )
     {
         images.append( pImg );
-        
-        qDebug() << now() <<  Q_FUNC_INFO << "grabbed!" << images.size();
-        
         emit captured( images.size() );
     }
     
     if( !mMaxCaptures 
             || mCurrentCapturedNum >= mMaxCaptures )
     {
+        mTimer.stop();
         emit finished();
     }
-    else
-    {
-        QTimer::singleShot( mCapturingDelay, this, SLOT( doGrab()) );
-    }
+//    else
+//    {
+//        QTimer::singleShot( mCapturingDelay, this, SLOT( doGrab()) );
+//    }
     
     return pImg;
 }
-
-/*static*/ /*QMap<quint8,QString> LSGCapturer::getModesNames()
-{
-    static QMap<quint8,QString> res;
-    if( res.isEmpty() )
-    {
-        res.insert( CP_ALL, tr( "Full screen" ) );
-        res.insert( CP_DISPLAY, tr( "Display" ) );
-        res.insert( CP_WINDOW, tr( "Window" ) );
-        res.insert( CP_AREA, tr( "Rectangle" ) );
-    }
-    
-    return res;
-}*/
-
-
 
 void LSGCapturer::setMaxCapturesLimit( int i )
 {
@@ -139,13 +122,12 @@ void LSGCapturer::setMaxCapturesLimit( int i )
 
 void LSGCapturer::setCapturingDelay( int i )
 {
-    mCapturingDelay = i;
+    mCapturingDelay = 1000/i;
 }
 
 
 void LSGCapturer::saveSeparatedFiles( const QString& path )
 {
-    qDebug() << now() <<  Q_FUNC_INFO << 1;
     static const QString tmpl( "_%1.png" );
     QList<QPixmapPtr>::const_iterator it;
     int i = 0;
@@ -168,10 +150,12 @@ void LSGCapturer::saveSeparatedFiles( const QString& path )
     }
 }
 
-void LSGCapturer::saveGIF( const QString& /*path*/ )
+void LSGCapturer::saveGIF()
 {
-    /*if( mGIFSaver )
-        mGIFSaver->save( path, images, mCapturingDelay );*/
+    if( mGIFSaver )
+    {
+        mGIFSaver->save( images, mCapturingDelay/10 );
+    }
 }
 
 QPixmapPtr LSGCapturer::shotScreen()
@@ -179,14 +163,18 @@ QPixmapPtr LSGCapturer::shotScreen()
     QPixmapPtr img;
     if( mAreaSelector )
     {
-        const QRectF r = mAreaSelector->getArea().boundingRect();
-        qDebug() << now() <<  Q_FUNC_INFO << r;
-        img = QPixmapPtr( new QPixmap( QPixmap::grabWindow( QApplication::desktop()->winId(), 
-                                                        r.x(), 
-                                                        r.y(), 
-                                                        r.width(), 
-                                                        r.height() ) ) );
+        const QRectF r = mAreaSelector->getArea( mSelectedAreaNum ).boundingRect();
+        img = QPixmapPtr( new QPixmap(
+#if QT_VERSION >= 0x050000
+        QGuiApplication::primaryScreen()->grabWindow(
+#else
+        QPixmap::grabWindow(
+#endif
+                                  QApplication::desktop()->winId(),
+                                  r.x(),
+                                  r.y(),
+                                  r.width(),
+                                  r.height() ) ) );
     }
-    qDebug() << now() <<  Q_FUNC_INFO << img->isNull();
     return img;
 }

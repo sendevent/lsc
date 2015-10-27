@@ -10,14 +10,20 @@ class LSGCapturingScreenRect :
         public LSGCapturingAreaPlugin
 {
     Q_OBJECT
+
+#if QT_VERSION >= 0x050000
+    Q_PLUGIN_METADATA(IID "org.livescreenshotcapturing.plugin.area" )
+#endif
+
     Q_INTERFACES(LSGCapturingAreaPlugin)
     
 public:
-    QString getAreaDescription() const;
-    QPainterPath getArea() const;
-    QPainterPath selectArea() const;
+    int getAreasCount() const { return 1; }
+    QString getAreaDescription( int ) const;
+    QPainterPath selectArea( int ) const;
+    QPainterPath getArea( int ) const;
     
-protected:
+private:
     static QPainterPath mPath;
 };
 

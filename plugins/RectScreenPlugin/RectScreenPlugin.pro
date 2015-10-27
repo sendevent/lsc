@@ -34,3 +34,7 @@ HEADERS  += lsg_capturingscreenrect.h \
     ../../app/include/lsg_capturingareaplugin.h
 
 FORMS    += lsg_rectselector.ui
+
+greaterThan(QT_MAJOR_VERSION, 4) {
+    QT += widgets
+}

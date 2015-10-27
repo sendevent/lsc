@@ -17,6 +17,11 @@
 #include <QX11Info>
 #endif //-- Q_OS_WIN
 
+#include <QPair>
+typedef QPair<int,int> PluginAreaNumsHolder;    // typedef for your type
+Q_DECLARE_METATYPE(PluginAreaNumsHolder);       // makes your type available to QMetaType system
+
+
 
 
 LSGMainWindow::LSGMainWindow(QWidget *parent) :
@@ -25,23 +30,9 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
   ,mStartDelay( 0 )
   ,mPrevMode( 0 )
 {
-    qDebug() << Q_FUNC_INFO;
-    
     ui->setupUi(this);
-    
-    /*QMap<quint8,QString> modes = LSGCapturer::getModesNames();
-    
-    
-    
-    qDebug() <<modes;
-    Q_FOREACH( quint8 id, modes.keys() )
-    {
-        qDebug() << id;
-        ui->modesComboBox->addItem( modes.value( id ), id );
-    }*/
-    
-    ui->previewLabel->setSizePolicy(QSizePolicy::Expanding,
-                                   QSizePolicy::Expanding);
+
+    ui->previewLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     ui->previewLabel->setAlignment(Qt::AlignCenter);
     ui->previewLabel->setMinimumSize(240, 160);
     
@@ -64,8 +55,8 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
              this, SLOT(show()) );
     
     showSaveProgress( 0,0 );
-    connect( pGrabber, SIGNAL(savingProgress(int, int)),
-             this, SLOT(showSaveProgress( int, int )));
+    connect( pGrabber, SIGNAL(savingProgress(int, int, QString)),
+             this, SLOT(showSaveProgress( int, int, QString )));
     
     if( !loadPlugins() )
     {
@@ -76,12 +67,12 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     pGrabber->setAreaSelector( plugins.at( 0 ) );
     
     pGrabber->setMaxCapturesLimit( 1 );
-    pGrabber->startGrab();
-    updatePreview();
+    on_startButton_clicked();
+//    updatePreview();
     
 }
 
-void LSGMainWindow::showSaveProgress( int steps, int step )
+void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
 {
     
     ui->progressBar->setRange( 0, steps );
@@ -89,9 +80,12 @@ void LSGMainWindow::showSaveProgress( int steps, int step )
     ui->progressBar->setValue( step );
     
     bool visible = steps || step;
-    qDebug() << Q_FUNC_INFO << steps << step << visible;
     ui->progressBar->setVisible( visible );
     ui->progressLabel->setVisible( visible );
+    ui->progressLabel->setText( visible
+                                ? msg
+                                : tr( "Saving" ) );
+
     
     ui->startButton->setEnabled( !visible );
     ui->startDelaySpinBox->setEnabled( !visible );
@@ -106,15 +100,12 @@ void LSGMainWindow::showSaveProgress( int steps, int step )
 
 LSGMainWindow::~LSGMainWindow()
 {
-    qDebug() << Q_FUNC_INFO;
     delete ui;
 }
 
 
 void LSGMainWindow::slotCaptureChanged()
 {
-    qDebug() << Q_FUNC_INFO;
-    
     QPixmapPtr pImg = pGrabber->getCapture();
     
     
@@ -124,14 +115,17 @@ void LSGMainWindow::slotCaptureChanged()
     }
     else
     {
-        mLastCapture = *pImg;
+        mLastCapture = pImg;
         updatePreview();
     }
 }
 
 void LSGMainWindow::on_startButton_clicked()
 {
-    mLastCapture = QPixmap();
+    if( mLastCapture )
+        mLastCapture.clear();
+
+    mLastCapture = QPixmapPtr( new QPixmap() );
     
     pGrabber->setMaxCapturesLimit( 1 );
     
@@ -147,9 +141,14 @@ void LSGMainWindow::on_startButton_clicked()
 }
 
 
+int LSGMainWindow::getFramesCount() const
+{
+    return ui->capLimitCombo->value()*ui->capDelaySpinBox->value();
+}
+
 void LSGMainWindow::on_grabSerialButton_clicked()
 {
-    int iMaxLimit = ui->capLimitCombo->value();
+    const int iMaxLimit = getFramesCount();
     if( !iMaxLimit )
     {
         QMessageBox::warning( this, tr( "Warning!" ), tr( "Max count not valid for serial grabbing!" ) );
@@ -172,9 +171,17 @@ void LSGMainWindow::on_grabSerialButton_clicked()
 
 void LSGMainWindow::updatePreview()
 {
-    ui->previewLabel->setPixmap( mLastCapture.scaled( ui->previewLabel->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation ) );
+    if( isVisible() && mLastCapture )
+        ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
 }
 
+
+void LSGMainWindow::showEvent( QShowEvent* e)
+{
+    QWidget::showEvent( e );
+    if( isVisible() )
+        updatePreview();
+}
 
 void LSGMainWindow::resizeEvent ( QResizeEvent * event ) 
 {
@@ -185,14 +192,12 @@ void LSGMainWindow::resizeEvent ( QResizeEvent * event )
 
 void LSGMainWindow::on_modesComboBox_activated( int index )
 {
-    qDebug() << Q_FUNC_INFO;
-    LSGCapturingAreaPlugin *areaSelector = plugins.at( index );
-    if( areaSelector )
+    PluginAreaNumsHolder plugAreaNum = ui->modesComboBox->itemData( index ).value<PluginAreaNumsHolder>();
+    if( const LSGCapturingAreaPlugin *areaSelector = plugins.at( plugAreaNum.first ) )
     {
-        QPainterPath path = areaSelector->selectArea();
-        if( !path.isEmpty() )
+        if( !areaSelector->selectArea( plugAreaNum.second ).isEmpty() )
         {
-            pGrabber->setAreaSelector( areaSelector );
+            pGrabber->setAreaSelector( areaSelector, plugAreaNum.second );
 
             on_startButton_clicked();
         }
@@ -209,7 +214,6 @@ void LSGMainWindow::on_capDelaySpinBox_valueChanged( int delay )
     pGrabber->setCapturingDelay( delay );
 }
 
-
 void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
 {
     mStartDelay = delay;
@@ -217,26 +221,17 @@ void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
 
 void LSGMainWindow::saveGif()
 {
-    //QString filePath = QFileDialog::getSaveFileName( this, tr( "Save Files in" ) );
-    QString filePath( "/home/denis/data/develop/LSC/bin_debug/123.gif" );
-    if( !filePath.isEmpty() )
-    {
-        showSaveProgress( ui->capLimitCombo->value()+1, 0 );
-        pGrabber->saveGIF( filePath );
-        
-        showSaveProgress( 0, 0 );
-    }
-    
+    pGrabber->saveGIF();
+    showSaveProgress( 0, 0 );
 }
 
 void LSGMainWindow::saveGifCustom()
 {
-    qDebug() << Q_FUNC_INFO << "not implemented yet!";
 }
 
 void LSGMainWindow::saveSeria()
 {
-    QString filePath = QFileDialog::getSaveFileName( this, tr( "Save Files in" ) );
+    const QString filePath = QFileDialog::getSaveFileName( this, tr( "Save Files in" ) );
     if( !filePath.isEmpty() )
     {
         pGrabber->saveSeparatedFiles( filePath );
@@ -245,10 +240,10 @@ void LSGMainWindow::saveSeria()
 
 void LSGMainWindow::saveCopy()
 {
-    if( !mLastCapture.isNull() )
+    if( mLastCapture && !mLastCapture->isNull() )
     {
         QClipboard *cpb = QApplication::clipboard();
-        cpb->setPixmap( mLastCapture );
+        cpb->setPixmap( *mLastCapture );
     }
 }
 
@@ -260,70 +255,30 @@ void LSGMainWindow::saveSendTo()
 
 bool LSGMainWindow::loadPlugins()
 {
-    
     bool res = false;
-    QObjectList plugs = QPluginLoader::staticInstances();
-    qDebug() << Q_FUNC_INFO << plugs.count();
-    foreach (QObject *plugin, plugs)
-    {
-        qDebug() << "FINDED static plugin";
-        
-        if( !res )
-            res = populateMenu( plugin );
-        else
-            populateMenu( plugin );
-    }
-    
-    qDebug() << "NOT FINDED static plugin";
-
-    QDir pluginsDir = QDir(qApp->applicationDirPath());
-
-//#if defined(Q_OS_WIN)
-//    if (pluginsDir.dirName().toLower() == "debug" || pluginsDir.dirName().toLower() == "release")
-//        pluginsDir.cdUp();
-//#elif defined(Q_OS_MAC)
-//    if (pluginsDir.dirName() == "MacOS") {
-//        pluginsDir.cdUp();
-//        pluginsDir.cdUp();
-//        pluginsDir.cdUp();
-//    }
-//#endif
+    QDir pluginsDir( qApp->applicationDirPath() );
     pluginsDir.cd( "plugins" );
-    foreach( QString fileName, pluginsDir.entryList( QDir::Files ) ) 
-    {
-        QPluginLoader loader( pluginsDir.absoluteFilePath( fileName ) );
-        QObject *plugin = loader.instance();
-        if (plugin) 
-        {
-            if( !res )
-                res = populateMenu( plugin );
-            else
-                populateMenu( plugin );
-            //pluginFileNames += fileName;
-            qDebug() << "FINDED dynamic plugin";
-        }
-        else
-        qDebug() << "NOT FINDED dynamic  plugin";
-    }
+
+    Q_FOREACH( const QString& fileName, pluginsDir.entryList( QDir::Files ) )
+        if ( const QObject *plugin = QPluginLoader( pluginsDir.absoluteFilePath( fileName ) ).instance() )
+            res |= populateMenu( plugin );
     
     return res;
 }
 
 
-bool LSGMainWindow::populateMenu(QObject *plugin)
+bool LSGMainWindow::populateMenu( const QObject *plugin )
 {
-    qDebug() << Q_FUNC_INFO;
-    LSGCapturingAreaPlugin *areaSelector = qobject_cast<LSGCapturingAreaPlugin *>(plugin);
-    if ( areaSelector )
+    if ( LSGCapturingAreaPlugin *areaSelector = qobject_cast<LSGCapturingAreaPlugin *>(plugin) )
     {
-        ui->modesComboBox->addItem( areaSelector->getAreaDescription(), QVariant::fromValue( plugins.size() ) );
-        plugins.append( areaSelector );
-        
-        qDebug() << Q_FUNC_INFO << plugins.size();
-        
+        for( int i = 0; i < areaSelector->getAreasCount(); ++i )
+        {
+            const PluginAreaNumsHolder plugAreaNum = qMakePair<int,int>( plugins.size(), i );
+             ui->modesComboBox->addItem( areaSelector->getAreaDescription( i ), QVariant::fromValue( plugAreaNum ) );
+            plugins.append( areaSelector );
+        }
         return true;
     }
-    
-    
+
     return false;
 }

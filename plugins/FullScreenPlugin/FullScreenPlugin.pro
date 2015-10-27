@@ -6,7 +6,7 @@
 
 QT       += core gui
 TEMPLATE = lib
-CONFIG   += plugin static
+CONFIG   += plugin
 TARGET = FullScreenPLugin
 
 CONFIG(debug, debug|release) {
@@ -27,7 +27,14 @@ INCLUDEPATH += ../../app/include/
 SOURCES += \
     lsg_capturingfullscreen.cpp
 
+
+
 HEADERS  += lsg_capturingfullscreen.h \
     ../../app/include/lsg_capturingareaplugin.h
 
+
 FORMS    +=
+
+greaterThan(QT_MAJOR_VERSION, 4) {
+    QT += widgets
+}

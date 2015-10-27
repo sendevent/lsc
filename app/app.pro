@@ -13,12 +13,11 @@ TEMPLATE = app
 
 CONFIG(debug, debug|release) {
     OUT_PATH = $$PWD/../bin_debug/
-    
 
     DEFINES += DEBUG
 } else {
     OUT_PATH = $$PWD/../bin_release/
-    
+
 }
 
 DESTDIR = $$OUT_PATH
@@ -27,26 +26,33 @@ MOC_DIR = $$OUT_PATH/intermediate/moc
 RCC_DIR = $$OUT_PATH/intermediate/rcc
 UI_DIR = $$OUT_PATH/intermediate/ui
 
+LIBS = -lMagick++
+
 INCLUDEPATH  += include
 
-LIBS = -L$$OUT_PATH/plugins/ \
--lFullScreenPLugin
-
+unix {
+    INCLUDEPATH  += /usr/include/ImageMagick-6
+    QMAKE_CXXFLAGS += `Magick++-config --cppflags --cxxflags --ldflags --libs`
+    LIBS += -lpthread `Magick++-config --ldflags --libs`
+}
 
 SOURCES += src/main.cpp\
         src/lsg_mainwindow.cpp \
     src/lsg_capturer.cpp \
-    lgs_gifsaver.cpp
+    lgs_gifsaver.cpp \
+    gifoptionsdialog.cpp
 
 
 
 HEADERS  += include/lsg_mainwindow.h \
     include/lsg_capturer.h \
     include/lsg_capturingareaplugin.h \
-    lgs_gifsaver.h
+    lgs_gifsaver.h \
+    gifoptionsdialog.h
 
 FORMS    += src/ui/lsg_mainwindow.ui \
-    src/ui/lsg_displayselector.ui
+    src/ui/lsg_displayselector.ui \
+    gifoptionsdialog.ui
 
 RESOURCES += \
     src/resources.qrc

@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QWidget>
 #include <QPixmap>
+#include <QTimer>
 
 #include "lgs_gifsaver.h"
 
@@ -19,17 +20,18 @@ public:
     
     QPixmapPtr getCapture( int num = -1 );
     void saveSeparatedFiles( const QString& path );
-    void saveGIF( const QString& path );
+    void saveGIF();
     QPixmapPtr shotScreen();
-    void setAreaSelector( LSGCapturingAreaPlugin *mAreaSelector );
+    void setAreaSelector( const LSGCapturingAreaPlugin *mAreaSelector, int option = 0 );
     
 signals:
     void captured( int count );
     void finished();
-    void savingProgress( int steps, int step );
+    void savingProgress( int steps, int step, const QString& msg );
     
 public slots:
     QPixmapPtr startGrab();
+    void onTimerFired();
     
     
     void setMaxCapturesLimit( int i );
@@ -40,18 +42,17 @@ protected slots:
     
 protected:
     QPixmapsList images;
-    QWidget *pMainWnd;
     
     int mMaxCaptures, mCurrentCapturedNum;
     int mCapturingDelay;
-    int mScreenNumber;
     
-    //QPainterPath mCapturingPath;
-    //QRectF mCapturingRect;
-
-    LSGCapturingAreaPlugin *mAreaSelector;
+    const LSGCapturingAreaPlugin *mAreaSelector;
     
     LGSGifSaver *mGIFSaver;
+
+    int mSelectedAreaNum;
+
+    QTimer mTimer;
 };
 
 #endif // LSG_CAPTURER_H

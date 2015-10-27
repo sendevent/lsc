@@ -10,18 +10,21 @@
 typedef QSharedPointer<QPixmap> QPixmapPtr;
 typedef QList<QPixmapPtr> QPixmapsList;
 
+class GifOptionsDialog;
+
 class LGSGifSaver : public QObject
 {
     Q_OBJECT
 public:
     explicit LGSGifSaver(QObject *parent = 0);
+    ~LGSGifSaver();
     
-    /*void save( const QString& path, const QPixmapsList& imagesList, int delay );
-    QVariant option( QImageIOHandler::ImageOption option ) const;
-    void write( const QString& path, const QPixmapsList& imagesList );
-    void fiSave( const QString& path, const QPixmapsList& imagesList, int delay );*/
+    void save( const QPixmapsList& imagesList, int delay ) const;
 signals:
-    void savingProgress( int steps, int step );
+    void savingProgress( int steps, int step, const QString& msg ) const;
+
+private:
+    GifOptionsDialog *mSaveDlg;
 };
 
 #endif // LGS_GIFSAVER_H

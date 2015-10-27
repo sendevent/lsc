@@ -35,10 +35,11 @@ protected slots:
     void saveCopy();
     void saveSendTo();
     
-    void showSaveProgress( int steps, int step );
+    void showSaveProgress( int steps, int step, const QString& msg = QString() );
     
 protected:
     void resizeEvent ( QResizeEvent * event );
+    void showEvent( QShowEvent* e);
 
 private:
     Ui::LSGMainWindow *ui;
@@ -46,12 +47,14 @@ private:
     int mPrevMode;
     LSGCapturer *pGrabber;
     
-    QPixmap mLastCapture;
+    QPixmapPtr mLastCapture;
     
     bool loadPlugins();
-    bool populateMenu(QObject *plugin);
+    bool populateMenu( const QObject *plugin );
     
     QList<LSGCapturingAreaPlugin*> plugins;
+
+    int getFramesCount() const;
 };
 
 #endif // LSG_MAINWINDOW_H

@@ -10,14 +10,23 @@ class LSGCapturingFullScreen :
         public LSGCapturingAreaPlugin
 {
     Q_OBJECT
+
+#if QT_VERSION >= 0x050000
+    Q_PLUGIN_METADATA(IID "org.livescreenshotcapturing.plugin.area" )
+#endif
+
     Q_INTERFACES(LSGCapturingAreaPlugin)
+
 public:
-    QString getAreaDescription() const;
-    QPainterPath selectArea() const;
-    QPainterPath getArea() const;
+    int getAreasCount() const;
+    QString getAreaDescription( int ) const;
+    QPainterPath selectArea( int ) const;
+    QPainterPath getArea( int ) const;
     
 private:
-    static QPainterPath mPath;
+    static QVector<QPainterPath> mPaths;
+
+    int getScreensCount() const;
 };
 
 #endif // LSG_CAPTURINGFULLSCREEN_H

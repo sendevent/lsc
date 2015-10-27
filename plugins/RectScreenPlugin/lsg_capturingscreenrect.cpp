@@ -8,18 +8,18 @@
 
 /*static*/ QPainterPath LSGCapturingScreenRect::mPath = QPainterPath();
 
-QString LSGCapturingScreenRect::getAreaDescription() const
+QString LSGCapturingScreenRect::getAreaDescription( int ) const
 {
     static const QString descr = QObject::tr( "Rectangle" );
     return descr;
 }
 
-QPainterPath LSGCapturingScreenRect::getArea() const
+QPainterPath LSGCapturingScreenRect::getArea( int ) const
 {
     return mPath;
 }
 
-QPainterPath LSGCapturingScreenRect::selectArea() const
+QPainterPath LSGCapturingScreenRect::selectArea( int ) const
 {
     mPath = QPainterPath();
     
@@ -34,4 +34,6 @@ QPainterPath LSGCapturingScreenRect::selectArea() const
     return mPath;
 }
 
+#if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN2(ScreenRectPLugin, LSGCapturingScreenRect)
+#endif

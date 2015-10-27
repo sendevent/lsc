@@ -5,32 +5,89 @@
 #include <QtPlugin>
 
 #include <QDebug>
+#if QT_VERSION >= 0x050000
+#include <QScreen>
+#endif //QT_VERSION >= 0x050000
+/*static*/ QVector<QPainterPath> LSGCapturingFullScreen::mPaths = QVector<QPainterPath>();
 
-/*static*/ QPainterPath LSGCapturingFullScreen::mPath = QPainterPath();
-
-QString LSGCapturingFullScreen::getAreaDescription() const
+int LSGCapturingFullScreen::getScreensCount() const
 {
-    static const QString descr = QObject::tr( "Full screen" );
-    return descr;
+#if QT_VERSION >= 0x050000
+    return QGuiApplication::screens().size();
+#else
+    return qApp->desktop()->screenCount();
+#endif //QT_VERSION >= 0x050000
 }
 
-QPainterPath LSGCapturingFullScreen::getArea() const
+int LSGCapturingFullScreen::getAreasCount() const
 {
-    qDebug() << Q_FUNC_INFO << mPath;
-    selectArea();
-    return mPath;
+    const int screensCnt = getScreensCount();
+    return screensCnt == 1
+            ? 1
+            : screensCnt + 1; // separated screens + united
 }
 
-QPainterPath LSGCapturingFullScreen::selectArea() const
+QString LSGCapturingFullScreen::getAreaDescription( int num ) const
 {
-    qDebug() << Q_FUNC_INFO << mPath;
-    if( mPath.isEmpty() )
+    static const QString descr = QObject::tr( "Full screen%1" );
+    const int screensCount = getScreensCount();
+
+    QString suffix;
+    if( screensCount == 1 )
+        suffix = QString::null;
+    else if( num >= screensCount )
+        suffix = tr( " (all)" );
+    else
     {
-        mPath.addRect( QApplication::desktop()->geometry() );
-        qDebug() << Q_FUNC_INFO << "2:" << mPath;
+#if QT_VERSION >= 0x050000
+        suffix = tr( " (#%1 — %2)" ).arg( num ).arg( QGuiApplication::screens().at( num )->name() );
+#else
+        suffix = tr( " (#%1)" ).arg( num );
+#endif // QT_VERSION >= 0x050000
+    }
+    return descr.arg( suffix );
+}
+
+QPainterPath LSGCapturingFullScreen::getArea( int num ) const
+{
+    return selectArea( num );
+}
+
+QPainterPath LSGCapturingFullScreen::selectArea( int num ) const
+{
+    if( mPaths.isEmpty() )
+    {
+        QRect r;
+#if QT_VERSION < 0x050000
+        QDesktopWidget *pDesktop = qApp->desktop();
+        for( int i = 0; i < pDesktop->screenCount(); ++i )
+#else
+        QList<QScreen *> screens = QGuiApplication::screens();
+        for( int i = 0; i < screens.size(); ++i )
+#endif // QT_VERSION < 0x050000
+
+        {
+            const QRect currR =
+
+#if QT_VERSION < 0x050000
+                    pDesktop->availableGeometry( i );
+#else
+                    screens.at( i )->availableGeometry();
+#endif // QT_VERSION < 0x050000
+
+            QPainterPath currPath;
+            currPath.addRect( currR );
+            mPaths.append( currPath );
+            r = r.united( currR );
+        }
+        QPainterPath wholePath;
+        wholePath.addRect( r );
+        mPaths.append( wholePath );
     }
     
-    return mPath;
+    return mPaths.at( num );
 }
 
+#if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN2(FullScreenPLugin, LSGCapturingFullScreen)
+#endif
