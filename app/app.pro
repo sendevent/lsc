@@ -26,14 +26,12 @@ MOC_DIR = $$OUT_PATH/intermediate/moc
 RCC_DIR = $$OUT_PATH/intermediate/rcc
 UI_DIR = $$OUT_PATH/intermediate/ui
 
-LIBS = -lMagick++
-
 INCLUDEPATH  += include
 
 unix {
     INCLUDEPATH  += /usr/include/ImageMagick-6
     QMAKE_CXXFLAGS += `Magick++-config --cppflags --cxxflags --ldflags --libs`
-    LIBS += -lpthread `Magick++-config --ldflags --libs`
+    LIBS += `Magick++-config --ldflags --libs`
 }
 
 SOURCES += src/main.cpp\
