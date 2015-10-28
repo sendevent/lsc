@@ -71,9 +71,9 @@ QPainterPath LSGCapturingFullScreen::selectArea( int num ) const
             const QRect currR =
 
 #if QT_VERSION < 0x050000
-                    pDesktop->availableGeometry( i );
+                    pDesktop->screen( i )->geometry();
 #else
-                    screens.at( i )->availableGeometry();
+                    screens.at( i )->geometry();
 #endif // QT_VERSION < 0x050000
 
             QPainterPath currPath;
