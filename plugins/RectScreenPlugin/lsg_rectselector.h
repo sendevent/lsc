@@ -26,6 +26,7 @@ public slots:
     
 protected slots:
     void init();
+    void detectCompositing();
 
 //signals:
 //    void regionGrabbed( const QPixmap & );
@@ -43,6 +44,9 @@ protected:
     QRegion handleMask( MaskType type ) const;
     QPoint limitPointToRect( const QPoint &p, const QRect &r ) const;
     QRect normalizeSelection( const QRect &s ) const;
+
+
+    QPixmap shootDesktop() const;
 
     QRect selection;
     bool mouseDown;
@@ -63,6 +67,9 @@ protected:
 
     QVector<QRect*> handles;
     QPixmap pixmap;
+
+    bool compositingDetected;
+    bool compositingEnabled;
 };
 
 #endif // LSG_RECSELECTOR_H

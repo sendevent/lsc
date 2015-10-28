@@ -26,6 +26,7 @@
 #include <QDesktopWidget>
 #include <QToolTip>
 #include <QTimer>
+#include <QDebug>
 
 #if QT_VERSION >= 0x050000
 #include <QScreen>
@@ -47,10 +48,15 @@ LSGRecSelector::LSGRecSelector( ) :
   ,THandle(0,0,handleSize,handleSize)
   ,RHandle(0,0,handleSize,handleSize)
   ,BHandle(0,0,handleSize,handleSize)
+  ,compositingDetected( false )
+  ,compositingEnabled(true)
 {
     handles << &TLHandle << &TRHandle << &BLHandle << &BRHandle
             << &LHandle << &THandle << &RHandle << &BHandle;
     setMouseTracking( true );
+
+    setAttribute( Qt::WA_TranslucentBackground, true );
+    setAttribute( Qt::WA_NoSystemBackground, true );
 }
 
 LSGRecSelector::~LSGRecSelector()
@@ -65,7 +71,7 @@ int LSGRecSelector::exec()
 }
 
 
-void LSGRecSelector::init()
+QPixmap LSGRecSelector::shootDesktop() const
 {
     QRect r;
     int screensCnt = 0;
@@ -82,9 +88,9 @@ void LSGRecSelector::init()
         const QRect currR =
 
 #if QT_VERSION < 0x050000
-                pDesktop->availableGeometry( i );
+                pDesktop->screen( i )->geometry();
 #else
-                screens.at( i )->availableGeometry();
+                screens.at( i )->geometry();
 #endif // QT_VERSION < 0x050000
 
         QPainterPath currPath;
@@ -92,7 +98,7 @@ void LSGRecSelector::init()
         r = r.united( currR );
     }
 
-    pixmap =
+    return
 #if QT_VERSION >= 0x050000
         QGuiApplication::primaryScreen()->grabWindow(
 #else
@@ -103,7 +109,11 @@ void LSGRecSelector::init()
                                   r.y(),
                                   r.width(),
                                   r.height() );
+}
 
+void LSGRecSelector::init()
+{
+    pixmap = shootDesktop();
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );
@@ -130,9 +140,30 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
     painter->restore();
 }
 
+int ctr = 0;
+void LSGRecSelector::detectCompositing()
+{
+    if( !compositingDetected )
+    {
+        const QImage img = shootDesktop().toImage().convertToFormat( QImage::Format_Indexed8 );
+
+        compositingDetected = true;
+        compositingEnabled = img.colorCount() > 1;
+
+        if( !compositingEnabled )
+            update();
+    }
+}
+
 void LSGRecSelector::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
+
+    if( !compositingDetected )
+    {
+        QTimer::singleShot( 10, this, SLOT( detectCompositing() ) );
+    }
+
     QPainter painter( this );
 
     QPalette pal(QToolTip::palette());
@@ -143,11 +174,14 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
     QColor overlayColor( 0, 0, 0, 160 );
     QColor textColor = pal.color( QPalette::Active, QPalette::Text );
     QColor textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
-    painter.drawPixmap(0, 0, pixmap);
+
+    if( !compositingEnabled )
+        painter.drawPixmap(0, 0, pixmap);
+
     painter.setFont(font);
 
     QRect r = selection;
-    if ( !selection.isNull() )
+    if ( compositingDetected && !selection.isNull() )
     {
         QRegion grey( rect() );
         grey = grey.subtracted( r );
@@ -159,7 +193,7 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
         drawRect( &painter, r, handleColor );
     }
 
-    if ( showHelp )
+    if ( compositingDetected && showHelp )
     {
         painter.setPen( textColor );
         painter.setBrush( textBackgroundColor );
@@ -170,7 +204,7 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
         painter.drawText( helpTextRect.adjusted( 3, 3, -3, -3 ), helpText );
     }
 
-    if ( selection.isNull() )
+    if ( selection.isNull() || !compositingDetected )
     {
         return;
     }
