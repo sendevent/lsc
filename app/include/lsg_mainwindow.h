@@ -55,6 +55,8 @@ private:
     QList<LSGCapturingAreaPlugin*> plugins;
 
     int getFramesCount() const;
+
+    void updateTotalFramesCountInfo();
 };
 
 #endif // LSG_MAINWINDOW_H

@@ -171,7 +171,7 @@ void LSGMainWindow::on_grabSerialButton_clicked()
 
 void LSGMainWindow::updatePreview()
 {
-    if( isVisible() && mLastCapture )
+    if( isVisible() && mLastCapture && !mLastCapture.isNull() )
         ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
 }
 
@@ -204,14 +204,21 @@ void LSGMainWindow::on_modesComboBox_activated( int index )
     }
 }
 
+void LSGMainWindow::updateTotalFramesCountInfo()
+{
+    ui->totalCountLabel->setText( QString::number( ui->capLimitCombo->value() * ui->capDelaySpinBox->value() ) );
+}
+
 void LSGMainWindow::on_capLimitCombo_valueChanged( int count )
 {
     pGrabber->setMaxCapturesLimit( count );
+    updateTotalFramesCountInfo();
 }
 
 void LSGMainWindow::on_capDelaySpinBox_valueChanged( int delay )
 {
     pGrabber->setCapturingDelay( delay );
+    updateTotalFramesCountInfo();
 }
 
 void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
