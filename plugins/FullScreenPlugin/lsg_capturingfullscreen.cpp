@@ -58,14 +58,15 @@ QPainterPath LSGCapturingFullScreen::selectArea( int num ) const
     if( mPaths.isEmpty() )
     {
         QRect r;
+        int screensCnt = 0;
 #if QT_VERSION < 0x050000
         QDesktopWidget *pDesktop = qApp->desktop();
-        for( int i = 0; i < pDesktop->screenCount(); ++i )
+        screensCnt = pDesktop->screenCount();
 #else
         QList<QScreen *> screens = QGuiApplication::screens();
-        for( int i = 0; i < screens.size(); ++i )
+        screensCnt = screens.size();
 #endif // QT_VERSION < 0x050000
-
+        for( int i = 0; i < screensCnt; ++i )
         {
             const QRect currR =
 
@@ -78,6 +79,7 @@ QPainterPath LSGCapturingFullScreen::selectArea( int num ) const
             QPainterPath currPath;
             currPath.addRect( currR );
             mPaths.append( currPath );
+
             r = r.united( currR );
         }
         QPainterPath wholePath;

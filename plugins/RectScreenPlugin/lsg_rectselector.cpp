@@ -27,6 +27,10 @@
 #include <QToolTip>
 #include <QTimer>
 
+#if QT_VERSION >= 0x050000
+#include <QScreen>
+#endif
+
 LSGRecSelector::LSGRecSelector( ) :
     QDialog( 0, Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool )
   ,selection()
@@ -60,9 +64,46 @@ int LSGRecSelector::exec()
     return QDialog::exec();
 }
 
+
 void LSGRecSelector::init()
 {
-    pixmap = QPixmap::grabWindow( QApplication::desktop()->winId() );
+    QRect r;
+    int screensCnt = 0;
+#if QT_VERSION < 0x050000
+    QDesktopWidget *pDesktop = qApp->desktop();
+    screensCnt = pDesktop->screenCount();
+#else
+    QList<QScreen *> screens = QGuiApplication::screens();
+    screensCnt = screens.size();
+#endif // QT_VERSION < 0x050000
+
+    for( int i = 0; i < screensCnt; ++i )
+    {
+        const QRect currR =
+
+#if QT_VERSION < 0x050000
+                pDesktop->availableGeometry( i );
+#else
+                screens.at( i )->availableGeometry();
+#endif // QT_VERSION < 0x050000
+
+        QPainterPath currPath;
+        currPath.addRect( currR );
+        r = r.united( currR );
+    }
+
+    pixmap =
+#if QT_VERSION >= 0x050000
+        QGuiApplication::primaryScreen()->grabWindow(
+#else
+        QPixmap::grabWindow(
+#endif
+                                  QApplication::desktop()->winId(),
+                                  r.x(),
+                                  r.y(),
+                                  r.width(),
+                                  r.height() );
+
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );

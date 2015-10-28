@@ -43,7 +43,6 @@ protected:
     QRegion handleMask( MaskType type ) const;
     QPoint limitPointToRect( const QPoint &p, const QRect &r ) const;
     QRect normalizeSelection( const QRect &s ) const;
-    //void grabRect();
 
     QRect selection;
     bool mouseDown;
