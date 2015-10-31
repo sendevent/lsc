@@ -1,9 +1,3 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2012-09-06T16:57:15
-#
-#-------------------------------------------------
-
 QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -28,29 +22,55 @@ UI_DIR = $$OUT_PATH/intermediate/ui
 
 INCLUDEPATH  += include
 
+SOURCES += src/main.cpp \
+    src/gifsaver.cpp \
+    src/capturer.cpp \
+    src/mainwindow.cpp \
+    src/screenshotworker.cpp
+
+HEADERS  += \
+    include/common.h \
+    include/gifsaver.h \
+    include/capturer.h \
+    include/capturingareaplugin.h \
+    include/mainwindow.h \
+    include/screenshotworker.h
+
+FORMS    += \
+    src/ui/displayselector.ui \
+    src/ui/mainwindow.ui
+
+RESOURCES += src/resources.qrc
+
+animatedgif {
+DEFINES = WITH_ANIMATED_GIF
 unix {
-    INCLUDEPATH  += /usr/include/ImageMagick-6
-    QMAKE_CXXFLAGS += `Magick++-config --cppflags --cxxflags --ldflags --libs`
-    LIBS += `Magick++-config --ldflags --libs`
+#    INCLUDEPATH  += /usr/include/ImageMagick-6
+    QMAKE_CXXFLAGS += `pkg-config --cflags Magick++`
+    LIBS += `pkg-config --libs Magick++`
 }
+windows {
+    IMAGEMAGICK_LIBS=$$(IMAGEMAGICK_LIBS)
+    IMAGEMAGICK_INCS=$$(IMAGEMAGICK_INCS)
 
-SOURCES += src/main.cpp\
-        src/lsg_mainwindow.cpp \
-    src/lsg_capturer.cpp \
-    lgs_gifsaver.cpp \
-    gifoptionsdialog.cpp
+    isEmpty(IMAGEMAGICK_LIBS) {
+        message("Environment variable 'IMAGEMAGICK_LIBS' should point to dir with ImageMagic's libs" )
+    }
+    isEmpty(IMAGEMAGICK_INCS) {
+        message("Environment variable 'IMAGEMAGICK_INCS' should point to dir with ImageMagic's includes" )
+    }
 
-
-
-HEADERS  += include/lsg_mainwindow.h \
-    include/lsg_capturer.h \
-    include/lsg_capturingareaplugin.h \
-    lgs_gifsaver.h \
-    gifoptionsdialog.h
-
-FORMS    += src/ui/lsg_mainwindow.ui \
-    src/ui/lsg_displayselector.ui \
-    gifoptionsdialog.ui
-
-RESOURCES += \
-    src/resources.qrc
+    INCLUDEPATH += $$IMAGEMAGICK_INCS
+    QMAKE_LIBDIR += $$IMAGEMAGICK_LIBS
+greaterThan(QT_MAJOR_VERSION, 4){
+    LIBS += -lMagick++-6.Q16-1 -lMagickCore-6.Q16-1
+}else{
+    LIBS += -lCORE_RL_Magick++_ -lCORE_RL_Magick_
+}
+}
+SOURCES += \
+    src/gifoptionsdialog.cpp
+HEADERS  += \
+    include/gifoptionsdialog.h
+FORMS    += src/ui/gifoptionsdialog.ui
+}

@@ -1,4 +1,4 @@
-#include "lgs_gifsaver.h"
+#include "gifsaver.h"
 
 #include <QBuffer>
 #include<QImage>
@@ -9,6 +9,7 @@
 #include <Magick++.h>
 
 #include "gifoptionsdialog.h"
+#include "capturer.h"
 
 LGSGifSaver::LGSGifSaver(QObject *parent) :
     QObject(parent)
@@ -18,10 +19,11 @@ LGSGifSaver::LGSGifSaver(QObject *parent) :
 
 LGSGifSaver::~LGSGifSaver()
 {
+    qDebug() << Q_FUNC_INFO;
     delete mSaveDlg;
 }
 
-void LGSGifSaver::save( const QPixmapsList& imagesList, int delay ) const
+void LGSGifSaver::save( const PixmapsList& imagesList, int delay ) const
 {
     if( mSaveDlg->exec() != QDialog::Accepted )
         return;
@@ -42,13 +44,11 @@ void LGSGifSaver::save( const QPixmapsList& imagesList, int delay ) const
             QBuffer buf( &ba );
             buf.open( QIODevice::WriteOnly );
             pPixmap->save( &buf, "PNG", 100 );
-//            buf.close();
 
             Magick::Image img( Magick::Blob( ba.data(), ba.size() ) );
             img.compressType( compressionType );
             img.quality( quality );
             img.animationDelay( delay );
-//            img.gifDisposeMethod( 4 );
             img.magick( "GIF" );
             frames.append( img );
         }

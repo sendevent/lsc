@@ -17,8 +17,8 @@
  *   Free Software Foundation, Inc.,
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#include "lsg_rectselector.h"
-#include "ui_lsg_rectselector.h"
+#include "rectselector.h"
+#include "ui_rectselector.h"
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -26,6 +26,11 @@
 #include <QDesktopWidget>
 #include <QToolTip>
 #include <QTimer>
+#include <QDebug>
+
+#if QT_VERSION >= 0x050000
+#include <QScreen>
+#endif
 
 LSGRecSelector::LSGRecSelector( ) :
     QDialog( 0, Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool )
@@ -43,10 +48,30 @@ LSGRecSelector::LSGRecSelector( ) :
   ,THandle(0,0,handleSize,handleSize)
   ,RHandle(0,0,handleSize,handleSize)
   ,BHandle(0,0,handleSize,handleSize)
+  ,compositingDetected(
+#if QT_VERSION < 0x050000 && defined( _OS_WIN )
+       true
+#else
+    false
+#endif
+       )
+  ,compositingEnabled(
+#if QT_VERSION < 0x050000 && defined( _OS_WIN )
+      true
+#else
+   false
+#endif
+       )
 {
     handles << &TLHandle << &TRHandle << &BLHandle << &BRHandle
             << &LHandle << &THandle << &RHandle << &BHandle;
     setMouseTracking( true );
+
+    setAttribute( Qt::WA_TranslucentBackground, true );
+//    setAttribute( Qt::WA_NoSystemBackground, true );
+//    setAttribute( Qt::WA_Hover, true );
+
+//    setFocusPolicy( Qt::WheelFocus );
 }
 
 LSGRecSelector::~LSGRecSelector()
@@ -56,19 +81,57 @@ LSGRecSelector::~LSGRecSelector()
 int LSGRecSelector::exec()
 {
     init();
-            
     return QDialog::exec();
+}
+
+
+QPixmap LSGRecSelector::shootDesktop() const
+{
+    QRect r;
+    int screensCnt = 0;
+#if QT_VERSION < 0x050000
+    QDesktopWidget *pDesktop = qApp->desktop();
+    screensCnt = pDesktop->screenCount();
+#else
+    QList<QScreen *> screens = QGuiApplication::screens();
+    screensCnt = screens.size();
+#endif // QT_VERSION < 0x050000
+
+    for( int i = 0; i < screensCnt; ++i )
+    {
+        const QRect currR =
+
+#if QT_VERSION < 0x050000
+                pDesktop->screen( i )->geometry();
+#else
+                screens.at( i )->geometry();
+#endif // QT_VERSION < 0x050000
+
+        QPainterPath currPath;
+        currPath.addRect( currR );
+        r = r.united( currR );
+    }
+
+    return
+#if QT_VERSION >= 0x050000
+        QGuiApplication::primaryScreen()->grabWindow(
+#else
+        QPixmap::grabWindow(
+#endif
+                                  QApplication::desktop()->winId(),
+                                  r.x(),
+                                  r.y(),
+                                  r.width(),
+                                  r.height() );
 }
 
 void LSGRecSelector::init()
 {
-    pixmap = QPixmap::grabWindow( QApplication::desktop()->winId() );
+    pixmap = shootDesktop();
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );
     show();
-    grabMouse();
-    grabKeyboard();
 }
 
 static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, const QColor &fill = QColor() )
@@ -87,11 +150,56 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
         painter->drawRect( r.adjusted( 1, 1, -1, -1 ) );
     }
     painter->restore();
+
+    // On Win7 selected area transparent for mouse events,
+    // fill it with almost transparent color to prevent
+    // losing focus on mouse moves/clicks
+    painter->save();
+    if( !r.isEmpty() && !clip.isEmpty() && !fill.isValid() )
+    {
+        painter->setBrush( QColor::fromRgb( fill.red(), fill.green(), fill.blue(), 1 ) );
+        painter->drawRect( r );
+    }
+    painter->restore();
+}
+
+int ctr = 0;
+void LSGRecSelector::detectCompositing()
+{
+    qDebug() <<Q_FUNC_INFO;
+    if( !compositingDetected )
+    {
+#ifdef Q_WS_WIN
+        compositingDetected = true;
+        compositingEnabled = true;
+        update();
+        return;
+#endif //Q_WS_WIN
+        const QImage& img = shootDesktop().toImage().convertToFormat( QImage::Format_Indexed8 );
+        img.save( "./compose.png", "PNG" );
+
+        compositingDetected = true;
+        compositingEnabled = img.colorCount() > 1;
+
+        qDebug() << img.colorCount();
+
+        if( !compositingEnabled )
+            update();
+    }
 }
 
 void LSGRecSelector::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
+
+    qDebug() << 4 << geometry();
+    if( !compositingDetected )
+    {
+        QTimer::singleShot( 10, this, SLOT( detectCompositing() ) );
+    }
+
+    qDebug() << compositingDetected << compositingEnabled;
+
     QPainter painter( this );
 
     QPalette pal(QToolTip::palette());
@@ -102,12 +210,16 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
     QColor overlayColor( 0, 0, 0, 160 );
     QColor textColor = pal.color( QPalette::Active, QPalette::Text );
     QColor textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
-    painter.drawPixmap(0, 0, pixmap);
+
+    if( !compositingEnabled )
+        painter.drawPixmap(0, 0, pixmap);
+
     painter.setFont(font);
 
-    QRect r = selection;
-    if ( !selection.isNull() )
+    const QRect r = selection;
+//    if ( compositingDetected ) //&& !selection.isNull() )
     {
+        qDebug() << "gray rect:";
         QRegion grey( rect() );
         grey = grey.subtracted( r );
         painter.setClipRegion( grey );
@@ -118,7 +230,7 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
         drawRect( &painter, r, handleColor );
     }
 
-    if ( showHelp )
+    if ( compositingDetected && showHelp )
     {
         painter.setPen( textColor );
         painter.setBrush( textBackgroundColor );
@@ -129,7 +241,7 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
         painter.drawText( helpTextRect.adjusted( 3, 3, -3, -3 ), helpText );
     }
 
-    if ( selection.isNull() )
+    if ( selection.isNull() || !compositingDetected )
     {
         return;
     }
@@ -137,8 +249,12 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
     // The grabbed region is everything which is covered by the drawn
     // rectangles (border included). This means that there is no 0px
     // selection, since a 0px wide rectangle will always be drawn as a line.
-    QString txt = QString( "%1x%2" ).arg( selection.width() )
-                  .arg( selection.height() );
+    const QString txt = QString( "[%1;%2], %3x%4" )
+            .arg( selection.x() )
+            .arg( selection.y() )
+            .arg( selection.width() )
+            .arg( selection.height() );
+
     QRect textRect = painter.boundingRect( rect(), Qt::AlignLeft, txt );
     QRect boundingRect = textRect.adjusted( -4, 0, 0, 0);
 
@@ -207,6 +323,9 @@ void LSGRecSelector::resizeEvent( QResizeEvent* e )
 
 void LSGRecSelector::mousePressEvent( QMouseEvent* e )
 {
+    qDebug() << hasFocus();
+    activateWindow() ;
+    qDebug() << hasFocus();
     showHelp = !helpTextRect.contains( e->pos() );
     if ( e->button() == Qt::LeftButton )
     {
@@ -231,6 +350,12 @@ void LSGRecSelector::mousePressEvent( QMouseEvent* e )
     }
     update();
 }
+
+//void LSGRecSelector::focusOutEvent(QFocusEvent * event)
+//{
+//    qApp->setActiveWindow( this );
+//    activateWindow();
+//}
 
 void LSGRecSelector::mouseMoveEvent( QMouseEvent* e )
 {
@@ -337,8 +462,8 @@ void LSGRecSelector::mouseReleaseEvent( QMouseEvent* e )
 
 void LSGRecSelector::mouseDoubleClickEvent( QMouseEvent* )
 {
-    //grabRect();
-    QDialog::accept();
+    if( selection.isValid() )
+        QDialog::accept();
 }
 
 void LSGRecSelector::keyPressEvent( QKeyEvent* e )

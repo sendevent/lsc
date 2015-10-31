@@ -5,11 +5,17 @@
 #include <QDesktopWidget>
 #include <QTimer>
 #include <QTime>
+#include <QMutexLocker>
+
 #include <QDebug>
 
 #if QT_VERSION >= 0x050000
 #include <QWindow>
 #include <QScreen>
+#endif
+
+#ifdef WITH_ANIMATED_GIF
+    #include "lgs_gifsaver.h"
 #endif
 
 QString now()
@@ -23,23 +29,33 @@ LSGCapturer::LSGCapturer( QObject *pParent /*= 0*/ )
     ,mCurrentCapturedNum( 0 )
     ,mCapturingDelay( 10 )
     ,mAreaSelector( 0 )
+#ifdef WITH_ANIMATED_GIF
     ,mGIFSaver( new LGSGifSaver() )
+#endif
+
     ,mSelectedAreaNum( 0 )
+    ,mLastTime( 0 )
 {
+#ifdef WITH_ANIMATED_GIF
     connect( mGIFSaver, SIGNAL(savingProgress(int, int, QString)),
              this, SIGNAL(savingProgress(int, int, QString)));
-
+#endif // WITH_ANIMATED_GIF
     connect( &mTimer, SIGNAL(timeout()),
              this, SLOT(onTimerFired()) );
 }
 
 LSGCapturer::~LSGCapturer()
 {
+    qDebug() << Q_FUNC_INFO;
+    images.clear();
+#ifdef WITH_ANIMATED_GIF
     delete mGIFSaver;
+#endif //WITH_ANIMATED_GIF
 }
 
 QPixmapPtr LSGCapturer::getCapture( int num /*= -1*/ )
 {
+    qDebug() << Q_FUNC_INFO << num;
     QPixmapPtr res;
     if( images.isEmpty() 
             || num >= images.size() )
@@ -73,38 +89,60 @@ void LSGCapturer::setAreaSelector( const LSGCapturingAreaPlugin *areaSelector, i
 
 void LSGCapturer::onTimerFired()
 {
-
     doGrab();
 }
 
 QPixmapPtr LSGCapturer::startGrab()
 {
-    qDebug() << now() <<  Q_FUNC_INFO;
+    qDebug() << Q_FUNC_INFO << now() <<  Q_FUNC_INFO;
     
     images.clear();
+
     mCurrentCapturedNum = 0;
+    const QPixmapPtr pImg = shotScreen();
+    for( int i = 0; i < mMaxCaptures; ++i )
+    {
+        images.append( QPixmapPtr( new QPixmap( pImg->width(), pImg->height() ) ) );
+    }
 
     mTimer.start( mCapturingDelay );
+
+    qDebug() << mTimer.interval();
     
     return doGrab();
 }
-
+qint64 started = 0;
 QPixmapPtr LSGCapturer::doGrab()
 {
-    ++mCurrentCapturedNum;
-    
-    QPixmapPtr pImg = shotScreen();
-    
-    if( pImg )
+    if( started == 0 ) started = QDateTime::currentMSecsSinceEpoch();
+    qint64 start = QDateTime::currentMSecsSinceEpoch();
+//    qDebug() << QDateTime::currentMSecsSinceEpoch() << mCurrentCapturedNum;
+    QMutexLocker ml( &mMutex );
+    if( mLastTime == 0 )
     {
-        images.append( pImg );
-        emit captured( images.size() );
+        mLastTime = QDateTime::currentMSecsSinceEpoch();
     }
+    else
+    {
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        qDebug() << "time from prev:" << ( now - mLastTime) << mCurrentCapturedNum;
+        mLastTime = now;
+    }
+
+    const QPixmapPtr pImg( shotScreen() );
+    images.append( pImg );
+    
+    emit captured( images.size() );
+
+    ++mCurrentCapturedNum;
     
     if( !mMaxCaptures 
             || mCurrentCapturedNum >= mMaxCaptures )
     {
         mTimer.stop();
+        mLastTime = 0;
+        qDebug() <<Q_FUNC_INFO << "session duration: " << (QDateTime::currentMSecsSinceEpoch() - started);
+        started = 0;
         emit finished();
     }
 //    else
@@ -112,12 +150,18 @@ QPixmapPtr LSGCapturer::doGrab()
 //        QTimer::singleShot( mCapturingDelay, this, SLOT( doGrab()) );
 //    }
     
+    qDebug() <<Q_FUNC_INFO << "method duration: " << (QDateTime::currentMSecsSinceEpoch() - start);
     return pImg;
 }
 
 void LSGCapturer::setMaxCapturesLimit( int i )
 {
     mMaxCaptures = i;
+}
+
+void LSGCapturer::actualizeScreenArea()
+{
+    mScreenRect = mAreaSelector->getArea( mSelectedAreaNum ).boundingRect();
 }
 
 void LSGCapturer::setCapturingDelay( int i )
@@ -150,20 +194,24 @@ void LSGCapturer::saveSeparatedFiles( const QString& path )
     }
 }
 
-void LSGCapturer::saveGIF()
+#ifdef WITH_ANIMATED_GIF
+void LSGCapturer::saveGIF() const
 {
     if( mGIFSaver )
     {
         mGIFSaver->save( images, mCapturingDelay/10 );
     }
 }
+#endif // WITH_ANIMATED_GIF
 
 QPixmapPtr LSGCapturer::shotScreen()
 {
     QPixmapPtr img;
     if( mAreaSelector )
     {
-        const QRectF r = mAreaSelector->getArea( mSelectedAreaNum ).boundingRect();
+        if( mScreenRect.isEmpty() )
+            mScreenRect = mAreaSelector->getArea( mSelectedAreaNum ).boundingRect();
+
         img = QPixmapPtr( new QPixmap(
 #if QT_VERSION >= 0x050000
         QGuiApplication::primaryScreen()->grabWindow(
@@ -171,10 +219,10 @@ QPixmapPtr LSGCapturer::shotScreen()
         QPixmap::grabWindow(
 #endif
                                   QApplication::desktop()->winId(),
-                                  r.x(),
-                                  r.y(),
-                                  r.width(),
-                                  r.height() ) ) );
+                                  mScreenRect.x(),
+                                  mScreenRect.y(),
+                                  mScreenRect.width(),
+                                  mScreenRect.height() ) ) );
     }
     return img;
 }

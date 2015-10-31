@@ -25,12 +25,13 @@ UI_DIR = $$OUT_PATH/intermediate/ui
 INCLUDEPATH += ../../app/include/
 
 SOURCES += \
-    lsg_capturingfullscreen.cpp
+    capturingfullscreen.cpp
 
 
 
-HEADERS  += lsg_capturingfullscreen.h \
-    ../../app/include/lsg_capturingareaplugin.h
+HEADERS  += \
+    ../../app/include/capturingareaplugin.h \
+    capturingfullscreen.h
 
 
 FORMS    +=

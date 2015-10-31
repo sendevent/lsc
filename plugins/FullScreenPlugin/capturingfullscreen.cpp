@@ -1,4 +1,4 @@
-#include "lsg_capturingfullscreen.h"
+#include "capturingfullscreen.h"
 
 #include <QApplication>
 #include <QDesktopWidget>
@@ -15,7 +15,10 @@ int LSGCapturingFullScreen::getScreensCount() const
 #if QT_VERSION >= 0x050000
     return QGuiApplication::screens().size();
 #else
-    return qApp->desktop()->screenCount();
+    const QDesktopWidget *pDsk = qApp->desktop();
+    return pDsk->isVirtualDesktop()
+            ? 1 // QWidget * QDesktopWidget::screen(int screen = -1) - ... If the system uses a virtual desktop, the returned widget will have the geometry of the entire virtual desktop; i.e., bounding every screen.
+            : pDsk->screenCount();
 #endif //QT_VERSION >= 0x050000
 }
 
@@ -58,33 +61,35 @@ QPainterPath LSGCapturingFullScreen::selectArea( int num ) const
     if( mPaths.isEmpty() )
     {
         QRect r;
+        int screensCnt = 0;
 #if QT_VERSION < 0x050000
         QDesktopWidget *pDesktop = qApp->desktop();
-        for( int i = 0; i < pDesktop->screenCount(); ++i )
+        screensCnt = pDesktop->screenCount();
 #else
         QList<QScreen *> screens = QGuiApplication::screens();
-        for( int i = 0; i < screens.size(); ++i )
+        screensCnt = screens.size();
 #endif // QT_VERSION < 0x050000
-
+        for( int i = 0; i < screensCnt; ++i )
         {
             const QRect currR =
 
 #if QT_VERSION < 0x050000
-                    pDesktop->availableGeometry( i );
+                    pDesktop->screen( i )->geometry();
 #else
-                    screens.at( i )->availableGeometry();
+                    screens.at( i )->geometry();
 #endif // QT_VERSION < 0x050000
 
             QPainterPath currPath;
             currPath.addRect( currR );
             mPaths.append( currPath );
+
             r = r.united( currR );
         }
         QPainterPath wholePath;
         wholePath.addRect( r );
         mPaths.append( wholePath );
     }
-    
+
     return mPaths.at( num );
 }
 

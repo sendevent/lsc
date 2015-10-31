@@ -2,13 +2,8 @@
 #define LGS_GIFSAVER_H
 
 #include <QObject>
-#include <QList>
-#include <QPixmap>
-#include <QSharedPointer>
-#include <QImageIOHandler>
 
-typedef QSharedPointer<QPixmap> QPixmapPtr;
-typedef QList<QPixmapPtr> QPixmapsList;
+#include "capturer.h"
 
 class GifOptionsDialog;
 
@@ -19,7 +14,7 @@ public:
     explicit LGSGifSaver(QObject *parent = 0);
     ~LGSGifSaver();
     
-    void save( const QPixmapsList& imagesList, int delay ) const;
+    void save( const PixmapsList& imagesList, int delay ) const;
 signals:
     void savingProgress( int steps, int step, const QString& msg ) const;
 

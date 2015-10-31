@@ -2,10 +2,10 @@
 #define LSG_CAPTURINGFULLSCREEN_H
 
 #include <QObject>
-#include "lsg_capturingareaplugin.h"
+#include "capturingareaplugin.h"
 
 
-class LSGCapturingFullScreen : 
+class LSGCapturingScreenRect : 
         public QObject, 
         public LSGCapturingAreaPlugin
 {
@@ -16,17 +16,15 @@ class LSGCapturingFullScreen :
 #endif
 
     Q_INTERFACES(LSGCapturingAreaPlugin)
-
+    
 public:
-    int getAreasCount() const;
+    int getAreasCount() const { return 1; }
     QString getAreaDescription( int ) const;
     QPainterPath selectArea( int ) const;
     QPainterPath getArea( int ) const;
     
 private:
-    static QVector<QPainterPath> mPaths;
-
-    int getScreensCount() const;
+    static QPainterPath mPath;
 };
 
 #endif // LSG_CAPTURINGFULLSCREEN_H

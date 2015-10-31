@@ -1,7 +1,7 @@
-#include "lsg_mainwindow.h"
-#include "ui_lsg_mainwindow.h"
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
 
-#include "lsg_capturingareaplugin.h"
+#include "capturingareaplugin.h"
 
 #include <QTimer>
 #include <QMap>
@@ -37,20 +37,25 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     ui->previewLabel->setMinimumSize(240, 160);
     
     QMenu *saveMenu = new QMenu( this );
-    QAction *pAct = saveMenu->addAction( tr( "Save GIF" ), this, SLOT(saveGif()) );
+    QAction *pAct;
+
+#ifdef WITH_ANIMATED_GIF
+    pAct = saveMenu->addAction( tr( "Save GIF" ), this, SLOT(saveGif()) );
     pAct = saveMenu->addAction( tr( "Save customized GIF" ), this, SLOT(saveGifCustom()) );
     pAct->setEnabled( false );
+#endif // WITH_ANIMATED_GIF
+
     pAct = saveMenu->addAction( tr( "Save separated PNGs" ), this, SLOT(saveSeria()) );
-    pAct = saveMenu->addAction( tr( "Copy current to buffer" ), this, SLOT(saveCopy()) );
+    pAct = saveMenu->addAction( tr( "Copy last to clipboard" ), this, SLOT(saveCopy()) );
     pAct = saveMenu->addAction( tr( "Send to" ), this, SLOT(saveSendTo()) );
     pAct->setEnabled( false );
     
     ui->saveButton->setMenu( saveMenu );
     
-    pGrabber = new LSGCapturer( this );
+    pGrabber = new LSCCapturer( this );
     
-    connect( pGrabber, SIGNAL(captured(int)),
-             this, SLOT(slotCaptureChanged()) );
+//    connect( pGrabber, SIGNAL(captured(int)),
+//             this, SLOT(slotCaptureChanged()) );
     connect( pGrabber, SIGNAL(finished()),
              this, SLOT(show()) );
     
@@ -66,10 +71,10 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     
     pGrabber->setAreaSelector( plugins.at( 0 ) );
     
-    pGrabber->setMaxCapturesLimit( 1 );
-    on_startButton_clicked();
-//    updatePreview();
-    
+    pGrabber->setFps( 1 );
+
+    mLastCapture = QPixmapPtr( new QPixmap() );
+    pGrabber->setFps( 1 );
 }
 
 void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
@@ -87,12 +92,12 @@ void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
                                 : tr( "Saving" ) );
 
     
-    ui->startButton->setEnabled( !visible );
+    ui->snapshotOneBtn->setEnabled( !visible );
     ui->startDelaySpinBox->setEnabled( !visible );
-    ui->grabSerialButton->setEnabled( !visible );
+    ui->snapshotAllBtn->setEnabled( !visible );
     ui->modesComboBox->setEnabled( !visible );
-    ui->capDelaySpinBox->setEnabled( !visible );
-    ui->capLimitCombo->setEnabled( !visible );
+    ui->fpsSpinBox->setEnabled( !visible );
+    ui->durationCombo->setEnabled( !visible );
     ui->copyButton->setEnabled( !visible );
     ui->saveButton->setEnabled( !visible );
     qApp->processEvents();
@@ -100,87 +105,77 @@ void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
 
 LSGMainWindow::~LSGMainWindow()
 {
+    qDebug() << Q_FUNC_INFO;
     delete ui;
 }
 
 
 void LSGMainWindow::slotCaptureChanged()
 {
-    QPixmapPtr pImg = pGrabber->getCapture();
-    
-    
-    if( !pImg )
+    if( isVisible() )
     {
-        qWarning() << Q_FUNC_INFO << "invalid img!";
-    }
-    else
-    {
-        mLastCapture = pImg;
-        updatePreview();
+        const QPixmapPtr pImg = pGrabber->getCapture();
+        if( pImg )
+        {
+            mLastCapture = pImg;
+            updatePreview();
+        }
     }
 }
 
-void LSGMainWindow::on_startButton_clicked()
+void LSGMainWindow::makeScreenshots( int fps, int duration )
 {
     if( mLastCapture )
         mLastCapture.clear();
 
-    mLastCapture = QPixmapPtr( new QPixmap() );
-    
-    pGrabber->setMaxCapturesLimit( 1 );
-    
+    pGrabber->setFps( fps );
+    pGrabber->setDuration( duration );
+    pGrabber->actualizeScreenArea();
+
+
     const int iDelay = mStartDelay*1000;
-    
+
 #ifdef Q_WS_X11
     const int iStartDelayDelta = QX11Info::isCompositingManagerRunning() ? 200 : 50;
 #else
     const int iStartDelayDelta = 200;
 #endif
     QTimer::singleShot( iDelay, this, SLOT(hide()));
-    QTimer::singleShot( iDelay + iStartDelayDelta, pGrabber, SLOT(startGrab()));
+    QTimer::singleShot( iDelay + iStartDelayDelta, this, SLOT(startCapturing()));
 }
 
-
-int LSGMainWindow::getFramesCount() const
+void LSGMainWindow::startCapturing()
 {
-    return ui->capLimitCombo->value()*ui->capDelaySpinBox->value();
+    pGrabber->startGrab();
 }
 
-void LSGMainWindow::on_grabSerialButton_clicked()
+void LSGMainWindow::on_snapshotOneBtn_clicked()
 {
-    const int iMaxLimit = getFramesCount();
-    if( !iMaxLimit )
-    {
-        QMessageBox::warning( this, tr( "Warning!" ), tr( "Max count not valid for serial grabbing!" ) );
-        return;
-    }
-    
-    pGrabber->setMaxCapturesLimit( iMaxLimit );
-    pGrabber->setCapturingDelay( ui->capDelaySpinBox->value() );
-    
-    const int iDelay = mStartDelay*1000;
-#ifdef Q_WS_X11
-    const int iStartDelayDelta = QX11Info::isCompositingManagerRunning() ? 200 : 50;
-#else
-    const int iStartDelayDelta = 200;
-#endif
-    QTimer::singleShot( iDelay, this, SLOT(hide()));
-    QTimer::singleShot( iDelay + iStartDelayDelta, pGrabber, SLOT(startGrab()));
-    
+    makeScreenshots( 1, 1 );
 }
+
+void LSGMainWindow::on_snapshotAllBtn_clicked()
+{
+    makeScreenshots( ui->fpsSpinBox->value(), ui->durationCombo->value() );
+}
+
+
 
 void LSGMainWindow::updatePreview()
 {
-    if( isVisible() && mLastCapture )
+    if( isVisible() && mLastCapture && !mLastCapture.isNull() )
         ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
 }
 
 
 void LSGMainWindow::showEvent( QShowEvent* e)
 {
+    qDebug() << Q_FUNC_INFO;
     QWidget::showEvent( e );
     if( isVisible() )
-        updatePreview();
+    {
+        slotCaptureChanged();
+    }
 }
 
 void LSGMainWindow::resizeEvent ( QResizeEvent * event ) 
@@ -199,19 +194,24 @@ void LSGMainWindow::on_modesComboBox_activated( int index )
         {
             pGrabber->setAreaSelector( areaSelector, plugAreaNum.second );
 
-            on_startButton_clicked();
+            on_snapshotOneBtn_clicked();
         }
     }
 }
 
-void LSGMainWindow::on_capLimitCombo_valueChanged( int count )
+void LSGMainWindow::updateTotalFramesCountInfo()
 {
-    pGrabber->setMaxCapturesLimit( count );
+    ui->totalCountLabel->setText( QString::number( ui->durationCombo->value() * ui->fpsSpinBox->value() ) );
 }
 
-void LSGMainWindow::on_capDelaySpinBox_valueChanged( int delay )
+void LSGMainWindow::on_durationCombo_valueChanged( int duration )
 {
-    pGrabber->setCapturingDelay( delay );
+    updateTotalFramesCountInfo();
+}
+
+void LSGMainWindow::on_fpsSpinBox_valueChanged( int fps )
+{
+    updateTotalFramesCountInfo();
 }
 
 void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
@@ -219,6 +219,7 @@ void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
     mStartDelay = delay;
 }
 
+#ifdef WITH_ANIMATED_GIF
 void LSGMainWindow::saveGif()
 {
     pGrabber->saveGIF();
@@ -228,6 +229,7 @@ void LSGMainWindow::saveGif()
 void LSGMainWindow::saveGifCustom()
 {
 }
+#endif // WITH_ANIMATED_GIF
 
 void LSGMainWindow::saveSeria()
 {

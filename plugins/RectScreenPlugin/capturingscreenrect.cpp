@@ -1,6 +1,6 @@
-#include "lsg_capturingscreenrect.h"
+#include "capturingscreenrect.h"
 
-#include "lsg_rectselector.h"
+#include "rectselector.h"
 
 #include <QApplication>
 #include <QDesktopWidget>

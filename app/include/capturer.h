@@ -1,63 +1,64 @@
-#ifndef LSG_CAPTURER_H
-#define LSG_CAPTURER_H
+#ifndef LSCCAPTURER_H
+#define LSCCAPTURER_H
+
+#include <QObject>
 
 #include <QObject>
 #include <QWidget>
 #include <QPixmap>
 #include <QTimer>
 #include <QSharedPointer>
-#include <QList>
+#include <QQueue>
 #include <QMutex>
 
 #include "common.h"
+#include "screenshotworker.h"
 
 class LGSGifSaver;
 class LSGCapturingAreaPlugin;
 
 
-
-
-class LSGCapturer : public QObject
+class LSCCapturer : public QObject
 {
     Q_OBJECT
 public:
-    
-    LSGCapturer( QObject *pParent = 0 );
-    ~LSGCapturer();
-    
-    QPixmapPtr getCapture( int num = -1 );
+
+    LSCCapturer( QObject *pParent = 0 );
+    ~LSCCapturer();
+
     void saveSeparatedFiles( const QString& path );
 
 #ifdef WITH_ANIMATED_GIF
     void saveGIF() const;
 #endif // WITH_ANIMATED_GIF
 
-    QPixmapPtr shotScreen();
     void setAreaSelector( const LSGCapturingAreaPlugin *mAreaSelector, int option = 0 );
-    
+
+    QPixmapPtr getCapture();
+
 signals:
-    void captured( int count );
+    void captured( int count, const QPixmapPtr img );
     void finished();
     void savingProgress( int steps, int step, const QString& msg );
-    
+    void startCapturing();
+
 public slots:
-    QPixmapPtr startGrab();
-    void onTimerFired();
-    
-    
-    void setMaxCapturesLimit( int i );
-    void setCapturingDelay( int i );
+    void startGrab();
+    void setFps( int i );
+    void setDuration( int i );
     void actualizeScreenArea();
-    
+
 protected slots:
-    QPixmapPtr doGrab();
-    
+
+    void captureRequest();
+    void onFinished();
+
 protected:
     PixmapsList images;
-    
-    int mMaxCaptures, mCurrentCapturedNum;
-    int mCapturingDelay;
-    
+
+    int mFps, mCurrentCapturedNum;
+    int mDuration;
+
     const LSGCapturingAreaPlugin *mAreaSelector;
 
 #ifdef WITH_ANIMATED_GIF
@@ -67,10 +68,11 @@ protected:
     int mSelectedAreaNum;
     QRectF mScreenRect;
 
-    QTimer mTimer;
-    QMutex mMutex;
-
     qint64 mLastTime;
+
+    QPixmapPtr shotScreenSync();
+    QThread workerThread;
+    LSCWorker *workerPtr;
 };
 
-#endif // LSG_CAPTURER_H
+#endif // LSCCAPTURER_H

@@ -25,15 +25,17 @@ UI_DIR = $$OUT_PATH/intermediate/ui
 INCLUDEPATH += ../../app/include/
 
 SOURCES += \
-    lsg_capturingscreenrect.cpp\
-    lsg_rectselector.cpp
+    capturingscreenrect.cpp \
+    rectselector.cpp
 
 
-HEADERS  += lsg_capturingscreenrect.h \
-    lsg_rectselector.h \
-    ../../app/include/lsg_capturingareaplugin.h
+HEADERS  += \
+    ../../app/include/capturingareaplugin.h \
+    capturingscreenrect.h \
+    rectselector.h
 
-FORMS    += lsg_rectselector.ui
+FORMS    += \
+    rectselector.ui
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets

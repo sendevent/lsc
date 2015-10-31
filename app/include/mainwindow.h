@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include <QPixmap>
-#include "lsg_capturer.h"
+#include "capturer.h"
 
 namespace Ui {
 class LSGMainWindow;
@@ -22,15 +22,19 @@ protected slots:
     void slotCaptureChanged();
     void updatePreview();
     
-    void on_startButton_clicked();
-    void on_grabSerialButton_clicked();
+    void on_snapshotOneBtn_clicked();
+    void on_snapshotAllBtn_clicked();
     void on_modesComboBox_activated( int index );
-    void on_capLimitCombo_valueChanged( int count );
-    void on_capDelaySpinBox_valueChanged( int delay );
+    void on_durationCombo_valueChanged( int count );
+    void on_fpsSpinBox_valueChanged( int delay );
     void on_startDelaySpinBox_valueChanged( int delay );
+
+    void startCapturing();
     
+#ifdef WITH_ANIMATED_GIF
     void saveGif();
     void saveGifCustom();
+#endif //WITH_ANIMATED_GIF
     void saveSeria();
     void saveCopy();
     void saveSendTo();
@@ -41,11 +45,13 @@ protected:
     void resizeEvent ( QResizeEvent * event );
     void showEvent( QShowEvent* e);
 
+    void makeScreenshots( int fps, int duration );
+
 private:
     Ui::LSGMainWindow *ui;
     int mStartDelay;
     int mPrevMode;
-    LSGCapturer *pGrabber;
+    LSCCapturer *pGrabber;
     
     QPixmapPtr mLastCapture;
     
@@ -54,7 +60,7 @@ private:
     
     QList<LSGCapturingAreaPlugin*> plugins;
 
-    int getFramesCount() const;
+    void updateTotalFramesCountInfo();
 };
 
 #endif // LSG_MAINWINDOW_H
