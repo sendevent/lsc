@@ -46,10 +46,10 @@ void LSCWorker::start()
             continue;
         }
 
-        qDebug() << "request for capture";
+        qDebug() << "request for capture" << currentFrame << "\t\t" << QDateTime::currentMSecsSinceEpoch();
         mQueue.enqueue( "capture" );
         emit capture( currentFrame );
-        qApp->processEvents();
+//        qApp->processEvents();
 
         if( framesCnt > 1 )
         {
@@ -63,7 +63,9 @@ void LSCWorker::start()
 
     }
 
+    mMutex.lock(); // to avoid dequeueing from LSCCapturer::onCaptureRequested
     mQueue.clear();
+    mMutex.unlock();
 
     emit finished();
 }
