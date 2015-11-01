@@ -26,7 +26,6 @@ public slots:
     
 protected slots:
     void init();
-    void detectCompositing();
 
 //signals:
 //    void regionGrabbed( const QPixmap & );
@@ -69,8 +68,7 @@ protected:
     QVector<QRect*> handles;
     QPixmap pixmap;
 
-    bool compositingDetected;
-    bool compositingEnabled;
+    const bool compositingEnabled;
 };
 
 #endif // LSG_RECSELECTOR_H

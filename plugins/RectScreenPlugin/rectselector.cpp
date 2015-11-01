@@ -48,20 +48,7 @@ LSGRecSelector::LSGRecSelector( ) :
   ,THandle(0,0,handleSize,handleSize)
   ,RHandle(0,0,handleSize,handleSize)
   ,BHandle(0,0,handleSize,handleSize)
-  ,compositingDetected(
-#if QT_VERSION < 0x050000 && defined( Q_OS_WIN )
-       true
-#else
-    false
-#endif
-       )
-  ,compositingEnabled(
-#if QT_VERSION < 0x050000 && defined( Q_OS_WIN )
-      true
-#else
-   false
-#endif
-       )
+  ,compositingEnabled( !qApp->arguments().contains( "--no-compositing" ) )
 {
     handles << &TLHandle << &TRHandle << &BLHandle << &BRHandle
             << &LHandle << &THandle << &RHandle << &BHandle;
@@ -78,19 +65,21 @@ LSGRecSelector::~LSGRecSelector()
 int LSGRecSelector::exec()
 {
     init();
+    activateWindow();
     return QDialog::exec();
 }
 
 
 QPixmap LSGRecSelector::shootDesktop() const
 {
+
     QRect r;
     int screensCnt = 0;
 #if QT_VERSION < 0x050000
     QDesktopWidget *pDesktop = qApp->desktop();
     screensCnt = pDesktop->screenCount();
 #else
-    QList<QScreen *> screens = QGuiApplication::screens();
+    const QList<QScreen *> screens = QGuiApplication::screens();
     screensCnt = screens.size();
 #endif // QT_VERSION < 0x050000
 
@@ -125,6 +114,8 @@ QPixmap LSGRecSelector::shootDesktop() const
 void LSGRecSelector::init()
 {
     pixmap = shootDesktop();
+
+    pixmap.save( "./t.png", "PNG" );
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );
@@ -133,21 +124,22 @@ void LSGRecSelector::init()
 
 static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, const QColor &fill = QColor() )
 {
-    QRegion clip( r );
-    clip = clip.subtracted( r.adjusted( 1, 1, -1, -1 ) );
+    const QRegion clip = QRegion( r ).subtracted( r.adjusted( 1, 1, -1, -1 ) );
 
     painter->save();
     painter->setClipRegion( clip );
     painter->setPen( Qt::NoPen );
     painter->setBrush( outline );
     painter->drawRect( r );
-    if ( fill.isValid() ) {
+    if ( fill.isValid() )
+    {
         painter->setClipping( false );
         painter->setBrush( fill );
         painter->drawRect( r.adjusted( 1, 1, -1, -1 ) );
     }
     painter->restore();
 
+#ifdef Q_OS_WIN
     // On Win7 selected area transparent for mouse events,
     // fill it with almost transparent color to prevent
     // losing focus on mouse moves/clicks
@@ -158,68 +150,38 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
         painter->drawRect( r );
     }
     painter->restore();
-}
-
-void LSGRecSelector::detectCompositing()
-{
-    qDebug() <<Q_FUNC_INFO;
-    if( !compositingDetected )
-    {
-#ifdef Q_WS_WIN
-        compositingDetected = true;
-        compositingEnabled = true;
-        update();
-        return;
-#endif //Q_WS_WIN
-        const QImage& img = shootDesktop().toImage().convertToFormat( QImage::Format_Indexed8 );
-
-        compositingDetected = true;
-        compositingEnabled = img.colorCount() > 1;
-
-        if( !compositingEnabled )
-            update();
-    }
+#endif // Q_OS_WIN
 }
 
 void LSGRecSelector::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
 
-    if( !compositingDetected )
-    {
-        QTimer::singleShot( 10, this, SLOT( detectCompositing() ) );
-    }
-
     QPainter painter( this );
 
-    QPalette pal(QToolTip::palette());
-    QFont font = QToolTip::font();
+    const QPalette pal( QToolTip::palette() );
+    const QFont font = QToolTip::font();
 
     QColor handleColor = pal.color( QPalette::Active, QPalette::Highlight );
     handleColor.setAlpha( 160 );
-    QColor overlayColor( 0, 0, 0, 160 );
-    QColor textColor = pal.color( QPalette::Active, QPalette::Text );
-    QColor textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
+    const QColor overlayColor( 0, 0, 0, 160 );
+    const QColor textColor = pal.color( QPalette::Active, QPalette::Text );
+    const QColor textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
 
     if( !compositingEnabled )
         painter.drawPixmap(0, 0, pixmap);
 
     painter.setFont(font);
 
-    const QRect r = selection;
-    {
-        qDebug() << "gray rect:";
-        QRegion grey( rect() );
-        grey = grey.subtracted( r );
-        painter.setClipRegion( grey );
-        painter.setPen( Qt::NoPen );
-        painter.setBrush( overlayColor );
-        painter.drawRect( rect() );
-        painter.setClipRect( rect() );
-        drawRect( &painter, r, handleColor );
-    }
+    const QRegion grey = QRegion( rect() ).subtracted( selection );
+    painter.setClipRegion( grey );
+    painter.setPen( Qt::NoPen );
+    painter.setBrush( overlayColor );
+    painter.drawRect( rect() );
+    painter.setClipRect( rect() );
+    drawRect( &painter, selection, handleColor );
 
-    if ( compositingDetected && showHelp )
+    if ( showHelp )
     {
         painter.setPen( textColor );
         painter.setBrush( textBackgroundColor );
@@ -230,7 +192,7 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
         painter.drawText( helpTextRect.adjusted( 3, 3, -3, -3 ), helpText );
     }
 
-    if ( selection.isNull() || !compositingDetected )
+    if ( selection.isNull() )
     {
         return;
     }
@@ -247,41 +209,41 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
     QRect textRect = painter.boundingRect( rect(), Qt::AlignLeft, txt );
     QRect boundingRect = textRect.adjusted( -4, 0, 0, 0);
 
-    if ( textRect.width() < r.width() - 2*handleSize &&
-         textRect.height() < r.height() - 2*handleSize &&
-         ( r.width() > 100 && r.height() > 100 ) ) // center, unsuitable for small selections
+    if ( textRect.width() < selection.width() - 2*handleSize &&
+         textRect.height() < selection.height() - 2*handleSize &&
+         ( selection.width() > 100 && selection.height() > 100 ) ) // center, unsuitable for small selections
     {
-        boundingRect.moveCenter( r.center() );
-        textRect.moveCenter( r.center() );
+        boundingRect.moveCenter( selection.center() );
+        textRect.moveCenter( selection.center() );
     }
-    else if ( r.y() - 3 > textRect.height() &&
-              r.x() + textRect.width() < rect().right() ) // on top, left aligned
+    else if ( selection.y() - 3 > textRect.height() &&
+              selection.x() + textRect.width() < rect().right() ) // on top, left aligned
     {
-        boundingRect.moveBottomLeft( QPoint( r.x(), r.y() - 3 ) );
-        textRect.moveBottomLeft( QPoint( r.x() + 2, r.y() - 3 ) );
+        boundingRect.moveBottomLeft( QPoint( selection.x(), selection.y() - 3 ) );
+        textRect.moveBottomLeft( QPoint( selection.x() + 2, selection.y() - 3 ) );
     }
-    else if ( r.x() - 3 > textRect.width() ) // left, top aligned
+    else if ( selection.x() - 3 > textRect.width() ) // left, top aligned
     {
-        boundingRect.moveTopRight( QPoint( r.x() - 3, r.y() ) );
-        textRect.moveTopRight( QPoint( r.x() - 5, r.y() ) );
+        boundingRect.moveTopRight( QPoint( selection.x() - 3, selection.y() ) );
+        textRect.moveTopRight( QPoint( selection.x() - 5, selection.y() ) );
     }
-    else if ( r.bottom() + 3 + textRect.height() < rect().bottom() &&
-              r.right() > textRect.width() ) // at bottom, right aligned
+    else if ( selection.bottom() + 3 + textRect.height() < rect().bottom() &&
+              selection.right() > textRect.width() ) // at bottom, right aligned
     {
-        boundingRect.moveTopRight( QPoint( r.right(), r.bottom() + 3 ) );
-        textRect.moveTopRight( QPoint( r.right() - 2, r.bottom() + 3 ) );
+        boundingRect.moveTopRight( QPoint( selection.right(), selection.bottom() + 3 ) );
+        textRect.moveTopRight( QPoint( selection.right() - 2, selection.bottom() + 3 ) );
     }
-    else if ( r.right() + textRect.width() + 3 < rect().width() ) // right, bottom aligned
+    else if ( selection.right() + textRect.width() + 3 < rect().width() ) // right, bottom aligned
     {
-        boundingRect.moveBottomLeft( QPoint( r.right() + 3, r.bottom() ) );
-        textRect.moveBottomLeft( QPoint( r.right() + 5, r.bottom() ) );
+        boundingRect.moveBottomLeft( QPoint( selection.right() + 3, selection.bottom() ) );
+        textRect.moveBottomLeft( QPoint( selection.right() + 5, selection.bottom() ) );
     }
     // if the above didn't catch it, you are running on a very tiny screen...
     drawRect( &painter, boundingRect, textColor, textBackgroundColor );
 
     painter.drawText( textRect, txt );
 
-    if ( ( r.height() > handleSize*2 && r.width() > handleSize*2 )
+    if ( ( selection.height() > handleSize*2 && selection.width() > handleSize*2 )
          || !mouseDown )
     {
         updateHandles();
@@ -312,9 +274,6 @@ void LSGRecSelector::resizeEvent( QResizeEvent* e )
 
 void LSGRecSelector::mousePressEvent( QMouseEvent* e )
 {
-    qDebug() << hasFocus();
-    activateWindow() ;
-    qDebug() << hasFocus();
     showHelp = !helpTextRect.contains( e->pos() );
     if ( e->button() == Qt::LeftButton )
     {
