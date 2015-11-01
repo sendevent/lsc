@@ -9,7 +9,8 @@
 #include <QTimer>
 #include <QTime>
 #include <QMutexLocker>
-
+#include <QMessageBox>
+#include <QFile>
 #include <QDebug>
 
 #if QT_VERSION >= 0x050000
@@ -160,23 +161,26 @@ void LSCCapturer::setDuration( int seconds )
 void LSCCapturer::saveSeparatedFiles( const QString& path )
 {
     static const QString tmpl( "_%1.png" );
-    QList<QPixmapPtr>::const_iterator it;
-    int i = 0;
-    qDebug()  <<  Q_FUNC_INFO << 2;
-    for( it = images.constBegin(); it != images.constEnd(); ++ it )
+    for(  int i = 0; i < images.size(); ++i )
     {
-        ++i;
         const QString name = tmpl.arg( i ).prepend( path );
-        QPixmapPtr pPixmap = *it;
-        if( pPixmap )
-        {
-            bool res = (*it)->save( name );
+        QFile f( name );
 
-            qDebug()  <<  Q_FUNC_INFO << name << " saved: " << res;
-        }
-        else
+        emit savingProgress( images.size(), i, tr( "Saving %1" ).arg( name  ) );
+
+        const QPixmapPtr pPixmap = images.at( i );
+
+        bool saved = false;
+        if( !pPixmap
+                || !f.open( QIODevice::WriteOnly )
+                || !pPixmap->save( &f, "PNG" ))
         {
-            qDebug()  <<  Q_FUNC_INFO << name << " skipped invalid img";
+            static const QString title( tr( "Save failed" ) );
+            static const QString msgTmpl( tr( "Can't save file\n%1\n%2" ) );
+            if( QMessageBox::Abort == QMessageBox::question( 0, title, msgTmpl.arg( name ).arg( pPixmap ? f.errorString() : QString::null ), QMessageBox::Abort, QMessageBox::Ignore ) )
+            {
+                return;
+            }
         }
     }
 }
@@ -194,9 +198,9 @@ void LSCCapturer::saveGIF() const
 
 void LSCCapturer::onCaptureRequested( int imgNum  )
 {
-    qDebug() << "capture";
+    qDebug() << "capture" << imgNum  << "\t\t" << QDateTime::currentMSecsSinceEpoch(); ;
 
-    qApp->processEvents();
+//    qApp->processEvents();
 
 //    images.append( shotScreenSync() );
     images[imgNum] = shotScreenSync();

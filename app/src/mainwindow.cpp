@@ -238,6 +238,7 @@ void LSGMainWindow::saveSeria()
     if( !filePath.isEmpty() )
     {
         pGrabber->saveSeparatedFiles( filePath );
+        showSaveProgress( 0, 0 );
     }
 }
 
