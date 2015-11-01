@@ -35,7 +35,7 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     ui->previewLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     ui->previewLabel->setAlignment(Qt::AlignCenter);
     ui->previewLabel->setMinimumSize(240, 160);
-    
+
     QMenu *saveMenu = new QMenu( this );
     QAction *pAct;
 
@@ -49,28 +49,28 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     pAct = saveMenu->addAction( tr( "Copy last to clipboard" ), this, SLOT(saveCopy()) );
     pAct = saveMenu->addAction( tr( "Send to" ), this, SLOT(saveSendTo()) );
     pAct->setEnabled( false );
-    
+
     ui->saveButton->setMenu( saveMenu );
-    
+
     pGrabber = new LSCCapturer( this );
-    
+
 //    connect( pGrabber, SIGNAL(captured(int)),
 //             this, SLOT(slotCaptureChanged()) );
     connect( pGrabber, SIGNAL(finished()),
              this, SLOT(show()) );
-    
+
     showSaveProgress( 0,0 );
     connect( pGrabber, SIGNAL(savingProgress(int, int, QString)),
              this, SLOT(showSaveProgress( int, int, QString )));
-    
+
     if( !loadPlugins() )
     {
         qWarning() << "Not found plugins! Aborting.";
         QTimer::singleShot( 10, qApp, SLOT(quit()) ) ;
     }
-    
+
     pGrabber->setAreaSelector( plugins.at( 0 ) );
-    
+
     pGrabber->setFps( 1 );
 
     mLastCapture = QPixmapPtr( new QPixmap() );
@@ -79,11 +79,11 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
 
 void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
 {
-    
+
     ui->progressBar->setRange( 0, steps );
     ui->progressBar->reset();
     ui->progressBar->setValue( step );
-    
+
     bool visible = steps || step;
     ui->progressBar->setVisible( visible );
     ui->progressLabel->setVisible( visible );
@@ -91,7 +91,7 @@ void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
                                 ? msg
                                 : tr( "Saving" ) );
 
-    
+
     ui->snapshotOneBtn->setEnabled( !visible );
     ui->startDelaySpinBox->setEnabled( !visible );
     ui->snapshotAllBtn->setEnabled( !visible );
@@ -179,7 +179,7 @@ void LSGMainWindow::showEvent( QShowEvent* e)
     }
 }
 
-void LSGMainWindow::resizeEvent ( QResizeEvent * event ) 
+void LSGMainWindow::resizeEvent ( QResizeEvent * event )
 {
     QWidget::resizeEvent( event );
     updatePreview();
@@ -265,7 +265,7 @@ bool LSGMainWindow::loadPlugins()
     Q_FOREACH( const QString& fileName, pluginsDir.entryList( QDir::Files ) )
         if ( const QObject *plugin = QPluginLoader( pluginsDir.absoluteFilePath( fileName ) ).instance() )
             res |= populateMenu( plugin );
-    
+
     return res;
 }
 

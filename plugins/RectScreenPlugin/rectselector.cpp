@@ -49,14 +49,14 @@ LSGRecSelector::LSGRecSelector( ) :
   ,RHandle(0,0,handleSize,handleSize)
   ,BHandle(0,0,handleSize,handleSize)
   ,compositingDetected(
-#if QT_VERSION < 0x050000 && defined( _OS_WIN )
+#if QT_VERSION < 0x050000 && defined( Q_OS_WIN )
        true
 #else
     false
 #endif
        )
   ,compositingEnabled(
-#if QT_VERSION < 0x050000 && defined( _OS_WIN )
+#if QT_VERSION < 0x050000 && defined( Q_OS_WIN )
       true
 #else
    false
@@ -68,10 +68,7 @@ LSGRecSelector::LSGRecSelector( ) :
     setMouseTracking( true );
 
     setAttribute( Qt::WA_TranslucentBackground, true );
-//    setAttribute( Qt::WA_NoSystemBackground, true );
-//    setAttribute( Qt::WA_Hover, true );
-
-//    setFocusPolicy( Qt::WheelFocus );
+    setAttribute( Qt::WA_NoSystemBackground, true );
 }
 
 LSGRecSelector::~LSGRecSelector()
@@ -163,7 +160,6 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
     painter->restore();
 }
 
-int ctr = 0;
 void LSGRecSelector::detectCompositing()
 {
     qDebug() <<Q_FUNC_INFO;
@@ -176,12 +172,9 @@ void LSGRecSelector::detectCompositing()
         return;
 #endif //Q_WS_WIN
         const QImage& img = shootDesktop().toImage().convertToFormat( QImage::Format_Indexed8 );
-        img.save( "./compose.png", "PNG" );
 
         compositingDetected = true;
         compositingEnabled = img.colorCount() > 1;
-
-        qDebug() << img.colorCount();
 
         if( !compositingEnabled )
             update();
@@ -192,13 +185,10 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
 
-    qDebug() << 4 << geometry();
     if( !compositingDetected )
     {
         QTimer::singleShot( 10, this, SLOT( detectCompositing() ) );
     }
-
-    qDebug() << compositingDetected << compositingEnabled;
 
     QPainter painter( this );
 
@@ -217,7 +207,6 @@ void LSGRecSelector::paintEvent( QPaintEvent* e )
     painter.setFont(font);
 
     const QRect r = selection;
-//    if ( compositingDetected ) //&& !selection.isNull() )
     {
         qDebug() << "gray rect:";
         QRegion grey( rect() );
