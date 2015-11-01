@@ -170,7 +170,6 @@ void LSCCapturer::saveSeparatedFiles( const QString& path )
 
         const QPixmapPtr pPixmap = images.at( i );
 
-        bool saved = false;
         if( !pPixmap
                 || !f.open( QIODevice::WriteOnly )
                 || !pPixmap->save( &f, "PNG" ))
@@ -200,9 +199,6 @@ void LSCCapturer::onCaptureRequested( int imgNum  )
 {
     qDebug() << "capture" << imgNum  << "\t\t" << QDateTime::currentMSecsSinceEpoch(); ;
 
-//    qApp->processEvents();
-
-//    images.append( shotScreenSync() );
     images[imgNum] = shotScreenSync();
 
     if( workerPtr && !(workerPtr->mQueue.isEmpty() ) )
