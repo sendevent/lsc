@@ -168,7 +168,7 @@ void LSGMainWindow::updatePreview()
         ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     }
 
-//    updateTotalFramesCountInfo();
+    updateTotalFramesCountInfo();
 }
 
 
@@ -194,15 +194,33 @@ void LSGMainWindow::on_modesComboBox_activated( int index )
     }
 }
 
+QString bytesToString( const quint64& bytes )
+{
+    static const QString tmpl( "RAM: %1 %2" );
+    if( bytes < 1024 )
+        return tmpl.arg( bytes ).arg( " b" );
+
+    const quint64 kbytes = bytes/1024;
+    if( kbytes < 1024 )
+        return tmpl.arg( kbytes ).arg( " KiB" );
+
+    const quint64 mbytes = kbytes/1024;
+    if( mbytes < 1024 )
+        return tmpl.arg( mbytes ).arg( " MiB" );
+
+    const quint64 gbytes = mbytes/1024;
+    return tmpl.arg( gbytes ).arg( " GiB" );
+}
+
 void LSGMainWindow::updateTotalFramesCountInfo()
 {
     const int imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
-//    const QString& size( (!mLastCapture || mLastCapture.isNull()  )
-//                ? "unknown"
-//                : QString::number( mLastCapture->toImage().byteCount() * imgCnt ) );
+    quint64 bytesCnt = mLastCapture
+            ? mLastCapture->toImage().byteCount() * imgCnt
+            : 0;
 
-//    ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( size  )  );
-    ui->totalCountLabel->setText( QString::number( imgCnt ) );
+    ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( ::bytesToString(  bytesCnt ) )  );
+//    ui->totalCountLabel->setText( QString::number( imgCnt ) );
 }
 
 void LSGMainWindow::on_durationCombo_valueChanged( int )
