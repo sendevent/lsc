@@ -205,22 +205,21 @@ QString bytesToString( const quint64& bytes )
         return tmpl.arg( kbytes ).arg( " KiB" );
 
     const quint64 mbytes = kbytes/1024;
-    if( mbytes < 1024 )
+//    if( mbytes < 1024 )
         return tmpl.arg( mbytes ).arg( " MiB" );
 
-    const quint64 gbytes = mbytes/1024;
-    return tmpl.arg( gbytes ).arg( " GiB" );
+//    const quint64 gbytes = mbytes/1024;
+//    return tmpl.arg( gbytes ).arg( " GiB" );
 }
 
 void LSGMainWindow::updateTotalFramesCountInfo()
 {
-    const int imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
-    quint64 bytesCnt = mLastCapture
+    const quint64 imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
+    const quint64 bytesCnt = mLastCapture
             ? mLastCapture->toImage().byteCount() * imgCnt
             : 0;
 
     ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( ::bytesToString(  bytesCnt ) )  );
-//    ui->totalCountLabel->setText( QString::number( imgCnt ) );
 }
 
 void LSGMainWindow::on_durationCombo_valueChanged( int )
