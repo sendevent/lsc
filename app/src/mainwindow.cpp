@@ -106,7 +106,6 @@ LSGMainWindow::~LSGMainWindow()
     delete ui;
 }
 
-
 void LSGMainWindow::makeScreenshots( int fps, int duration )
 {
     if( mLastCapture )
@@ -116,7 +115,6 @@ void LSGMainWindow::makeScreenshots( int fps, int duration )
     pGrabber->setDuration( duration );
     pGrabber->actualizeScreenArea();
 
-
     const int iDelay = mStartDelay*1000;
 
 #ifdef Q_WS_X11
@@ -124,11 +122,11 @@ void LSGMainWindow::makeScreenshots( int fps, int duration )
 #else
     const int iStartDelayDelta = 200;
 #endif
-//    QTimer::singleShot( iDelay, this, SLOT(hide()));
+
     hide();
+
     QTimer::singleShot( iDelay + iStartDelayDelta, this, SLOT(startCapturing()));
 }
-
 
 void LSGMainWindow::startCapturing()
 {
@@ -148,7 +146,6 @@ void LSGMainWindow::finishCapturing()
         show();
 }
 
-
 void LSGMainWindow::on_snapshotOneBtn_clicked()
 {
     makeScreenshots( 1, 1 );
@@ -159,8 +156,6 @@ void LSGMainWindow::on_snapshotAllBtn_clicked()
     makeScreenshots( ui->fpsSpinBox->value(), ui->durationCombo->value() );
 }
 
-
-
 void LSGMainWindow::updatePreview()
 {
     if( mLastCapture && !mLastCapture.isNull() )
@@ -170,8 +165,6 @@ void LSGMainWindow::updatePreview()
 
     updateTotalFramesCountInfo();
 }
-
-
 
 void LSGMainWindow::resizeEvent ( QResizeEvent * event )
 {
@@ -185,11 +178,16 @@ void LSGMainWindow::on_modesComboBox_activated( int index )
     PluginAreaNumsHolder plugAreaNum = ui->modesComboBox->itemData( index ).value<PluginAreaNumsHolder>();
     if( const LSGCapturingAreaPlugin *areaSelector = plugins.at( plugAreaNum.first ) )
     {
+        hide(); // removes this from screenshot
+        QCoreApplication::processEvents( QEventLoop::AllEvents, 100 );
         if( !areaSelector->selectArea( plugAreaNum.second ).isEmpty() )
         {
             pGrabber->setAreaSelector( areaSelector, plugAreaNum.second );
-
-            on_snapshotOneBtn_clicked();
+            on_snapshotOneBtn_clicked(); // updates screenshot and shows this
+        }
+        else
+        {
+            show();
         }
     }
 }
@@ -303,3 +301,4 @@ bool LSGMainWindow::populateMenu( const QObject *plugin )
 
     return false;
 }
+

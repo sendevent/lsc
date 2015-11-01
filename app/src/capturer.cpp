@@ -44,7 +44,6 @@ LSCCapturer::LSCCapturer( QObject *pParent /*= 0*/ )
 
 LSCCapturer::~LSCCapturer()
 {
-    qDebug() << Q_FUNC_INFO;
     images.clear();
 #ifdef WITH_ANIMATED_GIF
     delete mGIFSaver;
@@ -82,14 +81,7 @@ void LSCCapturer::startGrab()
     images.clear();
 
     const QPixmapPtr pImg = shotScreenSync();
-    const int imgCnt = mFps*mDuration;
-    images.reserve(imgCnt);
-
-    for( int i = 0; i < imgCnt; ++i)
-    {
-        images.append( QPixmapPtr(new QPixmap(*pImg.data())));
-    }
-
+    images.reserve( mFps*mDuration );
     if( workerPtr )
     {
         delete workerPtr;
@@ -97,20 +89,18 @@ void LSCCapturer::startGrab()
     workerPtr = new LSCWorker( mFps, mDuration );
     workerPtr->moveToThread(&workerThread);
     connect( workerPtr, SIGNAL(capture(int)), this, SLOT(onCaptureRequested(int)) );
-    connect( workerPtr, SIGNAL(finished()), this, SLOT(onFinished()) );
+    connect( workerPtr, SIGNAL(finished()), this, SLOT(onCapturingFinished()) );
 
     connect(this, SIGNAL(startCapturing()), workerPtr, SLOT(start()) );
 
     workerThread.start();
 
-
-
     QTimer::singleShot( 10, this, SIGNAL(startCapturing()) );
 }
 
-void LSCCapturer::onFinished()
+void LSCCapturer::onCapturingFinished()
 {
-    qDebug() << Q_FUNC_INFO << "duration:" <<( QDateTime::currentMSecsSinceEpoch() - mLastTime ) << QThread::currentThreadId() << "caps:" << images.size();
+    qDebug() << Q_FUNC_INFO << "duration:" <<( QDateTime::currentMSecsSinceEpoch() - mLastTime ) << "captured:" << images.size();
 
     workerThread.quit();
     workerThread.wait();
@@ -194,12 +184,11 @@ void LSCCapturer::saveGIF() const
 }
 #endif // WITH_ANIMATED_GIF
 
-
 void LSCCapturer::onCaptureRequested( int imgNum  )
 {
     qDebug() << "capture" << imgNum  << "\t\t" << QDateTime::currentMSecsSinceEpoch(); ;
 
-    images[imgNum] = shotScreenSync();
+    images.append( shotScreenSync() );
 
     if( workerPtr && !(workerPtr->mQueue.isEmpty() ) )
        workerPtr->mQueue.dequeue();

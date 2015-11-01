@@ -19,7 +19,6 @@ LGSGifSaver::LGSGifSaver(QObject *parent) :
 
 LGSGifSaver::~LGSGifSaver()
 {
-    qDebug() << Q_FUNC_INFO;
     delete mSaveDlg;
 }
 

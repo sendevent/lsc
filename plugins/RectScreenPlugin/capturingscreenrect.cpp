@@ -24,6 +24,7 @@ QPainterPath LSGCapturingScreenRect::selectArea( int ) const
     mPath = QPainterPath();
     
     LSGRecSelector *selector = new LSGRecSelector();
+
     if( QDialog::Accepted == selector->exec() )
     {
         mPath.addRect( selector->getSelectedRect() );

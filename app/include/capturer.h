@@ -51,7 +51,7 @@ public slots:
 protected slots:
 
     void onCaptureRequested(int num);
-    void onFinished();
+    void onCapturingFinished();
 
 protected:
     PixmapsList images;

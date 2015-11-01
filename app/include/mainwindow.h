@@ -17,7 +17,7 @@ class LSGMainWindow : public QWidget
 public:
     explicit LSGMainWindow(QWidget *parent = 0);
     ~LSGMainWindow();
-    
+
 protected slots:
 
     void updatePreview();

@@ -16,7 +16,6 @@ LSCWorker::LSCWorker( quint8 fps, int duration )
 
 LSCWorker::~LSCWorker()
 {
-    qDebug() << Q_FUNC_INFO;
 }
 
 void LSCWorker::customWait( int millisecondsToWait )
