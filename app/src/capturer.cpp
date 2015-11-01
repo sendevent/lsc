@@ -192,15 +192,9 @@ void LSCCapturer::saveGIF() const
 void LSCCapturer::captureRequest()
 {
     qApp->processEvents();
-//    qDebug() << workerPtr->mQueue.isEmpty();
-    if( workerPtr && !workerPtr->mQueue.isEmpty() )
-    {
+
+    images.append( shotScreenSync() );
+
+    if( workerPtr && !(workerPtr->mQueue.isEmpty() ) )
        workerPtr->mQueue.dequeue();
-//       qDebug() << Q_FUNC_INFO << workerPtr->mQueue.size() << QThread::currentThreadId();
-       images.append( shotScreenSync() );
-
-//       images.last()->save( QString( "./frame%1.png" ).arg( images.size() ), "PNG" );
-    }
-
-    qDebug() << images.size();
 }

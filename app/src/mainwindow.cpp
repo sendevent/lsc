@@ -140,7 +140,8 @@ void LSGMainWindow::makeScreenshots( int fps, int duration )
 #else
     const int iStartDelayDelta = 200;
 #endif
-    QTimer::singleShot( iDelay, this, SLOT(hide()));
+//    QTimer::singleShot( iDelay, this, SLOT(hide()));
+    hide();
     QTimer::singleShot( iDelay + iStartDelayDelta, this, SLOT(startCapturing()));
 }
 

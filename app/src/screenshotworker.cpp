@@ -16,7 +16,7 @@ LSCWorker::LSCWorker( quint8 fps, int duration )
 
 LSCWorker::~LSCWorker()
 {
-
+    qDebug() << Q_FUNC_INFO;
 }
 
 void LSCWorker::customWait( int millisecondsToWait )
@@ -33,11 +33,11 @@ void LSCWorker::start()
     const double period = (1.0/mFps)*1000;
 
     int currentFrame = 0;
-    const int framesCnt = mFps*mDuration+1;
+    const int framesCnt = mFps*mDuration;
 
     qDebug() << "period:"<<period << "mFps:" << mFps << "duration:" << mDuration << "framesCnt:"<<framesCnt;
 
-    while ( currentFrame < framesCnt )
+    while ( currentFrame < framesCnt || (currentFrame == 1 && framesCnt == 1))
     {
         const qint64 started = QDateTime::currentMSecsSinceEpoch();
 
@@ -62,9 +62,7 @@ void LSCWorker::start()
 
     }
 
-    mMutex.lock();
     mQueue.clear();
-    mMutex.unlock();
 
     emit finished();
 }
