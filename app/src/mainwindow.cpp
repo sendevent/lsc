@@ -54,14 +54,8 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
 
     pGrabber = new LSCCapturer( this );
 
-//    connect( pGrabber, SIGNAL(captured(int)),
-//             this, SLOT(slotCaptureChanged()) );
-    connect( pGrabber, SIGNAL(finished()),
-             this, SLOT(show()) );
 
     showSaveProgress( 0,0 );
-    connect( pGrabber, SIGNAL(savingProgress(int, int, QString)),
-             this, SLOT(showSaveProgress( int, int, QString )));
 
     if( !loadPlugins() )
     {
@@ -70,12 +64,16 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     }
 
     pGrabber->setAreaSelector( plugins.at( 0 ) );
-
-    pGrabber->setFps( 1 );
-
     mLastCapture = QPixmapPtr( new QPixmap() );
-    pGrabber->setFps( 1 );
+
+    connect( pGrabber, SIGNAL(finished()),
+             this, SLOT(finishCapturing()) );
+    connect( pGrabber, SIGNAL(savingProgress(int, int, QString)),
+         this, SLOT(showSaveProgress( int, int, QString )));
+
+    on_snapshotOneBtn_clicked();
 }
+
 
 void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
 {
@@ -105,23 +103,9 @@ void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
 
 LSGMainWindow::~LSGMainWindow()
 {
-    qDebug() << Q_FUNC_INFO;
     delete ui;
 }
 
-
-void LSGMainWindow::slotCaptureChanged()
-{
-    if( isVisible() )
-    {
-        const QPixmapPtr pImg = pGrabber->getCapture();
-        if( pImg )
-        {
-            mLastCapture = pImg;
-            updatePreview();
-        }
-    }
-}
 
 void LSGMainWindow::makeScreenshots( int fps, int duration )
 {
@@ -145,10 +129,25 @@ void LSGMainWindow::makeScreenshots( int fps, int duration )
     QTimer::singleShot( iDelay + iStartDelayDelta, this, SLOT(startCapturing()));
 }
 
+
 void LSGMainWindow::startCapturing()
 {
     pGrabber->startGrab();
 }
+
+void LSGMainWindow::finishCapturing()
+{
+    const QPixmapPtr pImg = pGrabber->getCapture();
+    if( pImg )
+    {
+        mLastCapture = pImg;
+        updatePreview();
+    }
+
+    if( isHidden() )
+        show();
+}
+
 
 void LSGMainWindow::on_snapshotOneBtn_clicked()
 {
@@ -164,20 +163,15 @@ void LSGMainWindow::on_snapshotAllBtn_clicked()
 
 void LSGMainWindow::updatePreview()
 {
-    if( isVisible() && mLastCapture && !mLastCapture.isNull() )
-        ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
-}
-
-
-void LSGMainWindow::showEvent( QShowEvent* e)
-{
-    qDebug() << Q_FUNC_INFO;
-    QWidget::showEvent( e );
-    if( isVisible() )
+    if( mLastCapture && !mLastCapture.isNull() )
     {
-        slotCaptureChanged();
+        ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     }
+
+//    updateTotalFramesCountInfo();
 }
+
+
 
 void LSGMainWindow::resizeEvent ( QResizeEvent * event )
 {
@@ -202,15 +196,21 @@ void LSGMainWindow::on_modesComboBox_activated( int index )
 
 void LSGMainWindow::updateTotalFramesCountInfo()
 {
-    ui->totalCountLabel->setText( QString::number( ui->durationCombo->value() * ui->fpsSpinBox->value() ) );
+    const int imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
+//    const QString& size( (!mLastCapture || mLastCapture.isNull()  )
+//                ? "unknown"
+//                : QString::number( mLastCapture->toImage().byteCount() * imgCnt ) );
+
+//    ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( size  )  );
+    ui->totalCountLabel->setText( QString::number( imgCnt ) );
 }
 
-void LSGMainWindow::on_durationCombo_valueChanged( int duration )
+void LSGMainWindow::on_durationCombo_valueChanged( int )
 {
     updateTotalFramesCountInfo();
 }
 
-void LSGMainWindow::on_fpsSpinBox_valueChanged( int fps )
+void LSGMainWindow::on_fpsSpinBox_valueChanged( int )
 {
     updateTotalFramesCountInfo();
 }

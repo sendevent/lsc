@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 #endif //WITH_ANIMATED_GIF
 
     QApplication a(argc, argv);
-    LSGMainWindow w;
-    w.show();
+    LSGMainWindow w; // schedules first screenshot
+    w.hide(); // and will be shown after that automaticaly
     
     return a.exec();
     

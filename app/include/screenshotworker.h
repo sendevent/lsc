@@ -17,7 +17,7 @@ public:
     QQueue<QString> mQueue;
 
 signals:
-    void capture();
+    void capture( int num );
     void finished();
 
 public slots:

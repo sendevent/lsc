@@ -19,7 +19,7 @@ public:
     ~LSGMainWindow();
     
 protected slots:
-    void slotCaptureChanged();
+
     void updatePreview();
     
     void on_snapshotOneBtn_clicked();
@@ -30,6 +30,7 @@ protected slots:
     void on_startDelaySpinBox_valueChanged( int delay );
 
     void startCapturing();
+    void finishCapturing();
     
 #ifdef WITH_ANIMATED_GIF
     void saveGif();
@@ -43,7 +44,6 @@ protected slots:
     
 protected:
     void resizeEvent ( QResizeEvent * event );
-    void showEvent( QShowEvent* e);
 
     void makeScreenshots( int fps, int duration );
 

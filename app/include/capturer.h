@@ -50,7 +50,7 @@ public slots:
 
 protected slots:
 
-    void captureRequest();
+    void onCaptureRequested(int num);
     void onFinished();
 
 protected:

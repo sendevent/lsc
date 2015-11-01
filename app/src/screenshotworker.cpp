@@ -37,7 +37,7 @@ void LSCWorker::start()
 
     qDebug() << "period:"<<period << "mFps:" << mFps << "duration:" << mDuration << "framesCnt:"<<framesCnt;
 
-    while ( currentFrame < framesCnt || (currentFrame == 1 && framesCnt == 1))
+    while ( currentFrame < framesCnt || (currentFrame == 0 && framesCnt == 1))
     {
         const qint64 started = QDateTime::currentMSecsSinceEpoch();
 
@@ -46,8 +46,9 @@ void LSCWorker::start()
             continue;
         }
 
+        qDebug() << "request for capture";
         mQueue.enqueue( "capture" );
-        emit capture();
+        emit capture( currentFrame );
         qApp->processEvents();
 
         if( framesCnt > 1 )

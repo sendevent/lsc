@@ -80,13 +80,22 @@ void LSCCapturer::startGrab()
 
     images.clear();
 
+    const QPixmapPtr pImg = shotScreenSync();
+    const int imgCnt = mFps*mDuration;
+    images.reserve(imgCnt);
+
+    for( int i = 0; i < imgCnt; ++i)
+    {
+        images.append( QPixmapPtr(new QPixmap(*pImg.data())));
+    }
+
     if( workerPtr )
     {
         delete workerPtr;
     }
     workerPtr = new LSCWorker( mFps, mDuration );
     workerPtr->moveToThread(&workerThread);
-    connect( workerPtr, SIGNAL(capture()), this, SLOT(captureRequest()) );
+    connect( workerPtr, SIGNAL(capture(int)), this, SLOT(onCaptureRequested(int)) );
     connect( workerPtr, SIGNAL(finished()), this, SLOT(onFinished()) );
 
     connect(this, SIGNAL(startCapturing()), workerPtr, SLOT(start()) );
@@ -102,20 +111,14 @@ void LSCCapturer::onFinished()
 {
     qDebug() << Q_FUNC_INFO << "duration:" <<( QDateTime::currentMSecsSinceEpoch() - mLastTime ) << QThread::currentThreadId() << "caps:" << images.size();
 
-
-
-
     workerThread.quit();
     workerThread.wait();
 
     emit finished();
 }
 
-
-
 QPixmapPtr LSCCapturer::shotScreenSync()
 {
-    qDebug() << Q_FUNC_INFO;
     QPixmapPtr img;
     if( mAreaSelector )
     {
@@ -189,11 +192,14 @@ void LSCCapturer::saveGIF() const
 #endif // WITH_ANIMATED_GIF
 
 
-void LSCCapturer::captureRequest()
+void LSCCapturer::onCaptureRequested( int imgNum  )
 {
+    qDebug() << "capture";
+
     qApp->processEvents();
 
-    images.append( shotScreenSync() );
+//    images.append( shotScreenSync() );
+    images[imgNum] = shotScreenSync();
 
     if( workerPtr && !(workerPtr->mQueue.isEmpty() ) )
        workerPtr->mQueue.dequeue();
