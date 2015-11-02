@@ -9,6 +9,7 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QClipboard>
+#include <QStatusBar>
 
 #include <QPluginLoader>
 #include <QDebug>
@@ -24,9 +25,9 @@ Q_DECLARE_METATYPE(PluginAreaNumsHolder);       // makes your type available to 
 
 
 
-LSGMainWindow::LSGMainWindow(QWidget *parent) :
-    QWidget(parent)
-  ,ui(new Ui::LSGMainWindow)
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent)
+  ,ui(new Ui::MainWindow)
   ,mStartDelay( 0 )
   ,mPrevMode( 0 )
   ,mLastCapture( 0 )
@@ -36,6 +37,9 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     ui->previewLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     ui->previewLabel->setAlignment(Qt::AlignCenter);
     ui->previewLabel->setMinimumSize(240, 160);
+
+    pProgress = new QProgressBar(0);
+    statusBar()->addPermanentWidget( pProgress );
 
     QMenu *saveMenu = new QMenu( this );
     QAction *pAct;
@@ -75,20 +79,18 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
 }
 
 
-void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
+void MainWindow::showSaveProgress( int steps, int step, const QString& msg )
 {
 
-    ui->progressBar->setRange( 0, steps );
-    ui->progressBar->reset();
-    ui->progressBar->setValue( step );
+    pProgress->setRange( 0, steps );
+    pProgress->reset();
+    pProgress->setValue( step );
 
-    bool visible = steps || step;
-    ui->progressBar->setVisible( visible );
-    ui->progressLabel->setVisible( visible );
-    ui->progressLabel->setText( visible
-                                ? msg
-                                : tr( "Saving" ) );
+    const bool visible = steps || step;
+    pProgress->setVisible( visible );
 
+    if( visible )
+        statusBar()->showMessage( msg );
 
     ui->snapshotOneBtn->setEnabled( !visible );
     ui->startDelaySpinBox->setEnabled( !visible );
@@ -101,12 +103,12 @@ void LSGMainWindow::showSaveProgress( int steps, int step, const QString& msg )
     qApp->processEvents();
 }
 
-LSGMainWindow::~LSGMainWindow()
+MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-void LSGMainWindow::makeScreenshots( int fps, int duration )
+void MainWindow::makeScreenshots( int fps, int duration )
 {
     if( mLastCapture )
         mLastCapture.clear();
@@ -128,12 +130,12 @@ void LSGMainWindow::makeScreenshots( int fps, int duration )
     QTimer::singleShot( iDelay + iStartDelayDelta, this, SLOT(startCapturing()));
 }
 
-void LSGMainWindow::startCapturing()
+void MainWindow::startCapturing()
 {
     pGrabber->startGrab();
 }
 
-void LSGMainWindow::finishCapturing()
+void MainWindow::finishCapturing()
 {
     const ImageWrapperPtr pImg = pGrabber->getCapture();
     if( pImg )
@@ -146,17 +148,17 @@ void LSGMainWindow::finishCapturing()
         show();
 }
 
-void LSGMainWindow::on_snapshotOneBtn_clicked()
+void MainWindow::on_snapshotOneBtn_clicked()
 {
     makeScreenshots( 1, 1 );
 }
 
-void LSGMainWindow::on_snapshotAllBtn_clicked()
+void MainWindow::on_snapshotAllBtn_clicked()
 {
     makeScreenshots( ui->fpsSpinBox->value(), ui->durationCombo->value() );
 }
 
-void LSGMainWindow::updatePreview()
+void MainWindow::updatePreview()
 {
     if( mLastCapture && !mLastCapture.isNull() )
     {
@@ -167,14 +169,14 @@ void LSGMainWindow::updatePreview()
     updateTotalFramesCountInfo();
 }
 
-void LSGMainWindow::resizeEvent ( QResizeEvent * event )
+void MainWindow::resizeEvent ( QResizeEvent * event )
 {
-    QWidget::resizeEvent( event );
+    QMainWindow::resizeEvent( event );
     updatePreview();
 }
 
 
-void LSGMainWindow::on_modesComboBox_activated( int index )
+void MainWindow::on_modesComboBox_activated( int index )
 {
     PluginAreaNumsHolder plugAreaNum = ui->modesComboBox->itemData( index ).value<PluginAreaNumsHolder>();
     if( const LSGCapturingAreaPlugin *areaSelector = plugins.at( plugAreaNum.first ) )
@@ -211,7 +213,7 @@ QString bytesToString( const quint64& bytes )
 //    return tmpl.arg( gbytes ).arg( " GiB" );
 }
 
-void LSGMainWindow::updateTotalFramesCountInfo()
+void MainWindow::updateTotalFramesCountInfo()
 {
     const quint64 imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
     const quint64 bytesCnt = mLastCapture
@@ -221,34 +223,34 @@ void LSGMainWindow::updateTotalFramesCountInfo()
     ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( ::bytesToString(  bytesCnt ) )  );
 }
 
-void LSGMainWindow::on_durationCombo_valueChanged( int )
+void MainWindow::on_durationCombo_valueChanged( int )
 {
     updateTotalFramesCountInfo();
 }
 
-void LSGMainWindow::on_fpsSpinBox_valueChanged( int )
+void MainWindow::on_fpsSpinBox_valueChanged( int )
 {
     updateTotalFramesCountInfo();
 }
 
-void LSGMainWindow::on_startDelaySpinBox_valueChanged( int delay )
+void MainWindow::on_startDelaySpinBox_valueChanged( int delay )
 {
     mStartDelay = delay;
 }
 
 #ifdef WITH_ANIMATED_GIF
-void LSGMainWindow::saveGif()
+void MainWindow::saveGif()
 {
     pGrabber->saveGIF();
     showSaveProgress( 0, 0 );
 }
 
-void LSGMainWindow::saveGifCustom()
+void MainWindow::saveGifCustom()
 {
 }
 #endif // WITH_ANIMATED_GIF
 
-void LSGMainWindow::saveSeria()
+void MainWindow::saveSeria()
 {
     const QString filePath = QFileDialog::getSaveFileName( this, tr( "Save Files in" ) );
     if( !filePath.isEmpty() )
@@ -258,7 +260,7 @@ void LSGMainWindow::saveSeria()
     }
 }
 
-void LSGMainWindow::saveCopy()
+void MainWindow::saveCopy()
 {
     if( mLastCapture && !mLastCapture->img()->isNull() )
     {
@@ -267,13 +269,13 @@ void LSGMainWindow::saveCopy()
     }
 }
 
-void LSGMainWindow::saveSendTo()
+void MainWindow::saveSendTo()
 {
     qDebug() << Q_FUNC_INFO << "not implemented yet!";
 }
 
 
-bool LSGMainWindow::loadPlugins()
+bool MainWindow::loadPlugins()
 {
     bool res = false;
     QDir pluginsDir( qApp->applicationDirPath() );
@@ -287,7 +289,7 @@ bool LSGMainWindow::loadPlugins()
 }
 
 
-bool LSGMainWindow::populateMenu( const QObject *plugin )
+bool MainWindow::populateMenu( const QObject *plugin )
 {
     if ( LSGCapturingAreaPlugin *areaSelector = qobject_cast<LSGCapturingAreaPlugin *>(plugin) )
     {

@@ -41,8 +41,8 @@ HEADERS  += \
 
 FORMS    += \
     src/ui/displayselector.ui \
-    src/ui/mainwindow.ui \
-    src/ui/gifframepreviewer.ui
+    src/ui/gifframepreviewer.ui \
+    src/ui/mainwindow.ui
 
 RESOURCES += src/resources.qrc
 

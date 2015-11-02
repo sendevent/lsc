@@ -58,6 +58,8 @@ void LGSGifSaver::save( const ImagesList& imagesList, int delay ) const
 
         emit savingProgress( totalSteps, imagesList.size() + 1, tr( "Saving GIF" ) );
 
+        qApp->processEvents();
+
         Magick::writeImages( frames.begin(), frames.end(), path.toStdString() );
 
         emit savingProgress( totalSteps, imagesList.size() + 2, tr( "Saved! %1" ).arg( path ) );

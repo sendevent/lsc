@@ -1,22 +1,23 @@
-#ifndef LSG_MAINWINDOW_H
-#define LSG_MAINWINDOW_H
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
 
-#include <QWidget>
+#include <QMainWindow>
 #include <QPixmap>
 #include "capturer.h"
+#include <QProgressBar>
 
 namespace Ui {
-class LSGMainWindow;
+class MainWindow;
 }
 
 class LSGCapturingAreaPlugin;
-class LSGMainWindow : public QWidget
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
     
 public:
-    explicit LSGMainWindow(QWidget *parent = 0);
-    ~LSGMainWindow();
+    explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
 
 protected slots:
 
@@ -48,10 +49,11 @@ protected:
     void makeScreenshots( int fps, int duration );
 
 private:
-    Ui::LSGMainWindow *ui;
+    Ui::MainWindow *ui;
     int mStartDelay;
     int mPrevMode;
     LSCCapturer *pGrabber;
+    QProgressBar *pProgress;
     
     ImageWrapperPtr mLastCapture;
     
@@ -63,4 +65,4 @@ private:
     void updateTotalFramesCountInfo();
 };
 
-#endif // LSG_MAINWINDOW_H
+#endif // MAINWINDOW_H
