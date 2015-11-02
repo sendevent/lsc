@@ -181,7 +181,7 @@ void LSCCapturer::saveGIF() const
 {
     if( mGIFSaver )
     {
-        mGIFSaver->save( images, mDuration/10 );
+        mGIFSaver->save( images, 100/mFps );
     }
 }
 #endif // WITH_ANIMATED_GIF
