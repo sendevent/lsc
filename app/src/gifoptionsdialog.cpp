@@ -32,9 +32,6 @@ GifOptionsDialog::GifOptionsDialog(QWidget *parent) :
     ui->compressCombo->addItem( "LZMA", MagickCore::LZMACompression ) ;
     ui->compressCombo->addItem( "JBIG1", MagickCore::JBIG1Compression ) ;
     ui->compressCombo->addItem( "JBIG2", MagickCore::JBIG2Compression ) ;
-
-    ui->disposeCombo->addItem( "JBIG2", MagickCore::JBIG2Compression ) ;
-
 }
 
 GifOptionsDialog::~GifOptionsDialog()
@@ -69,4 +66,9 @@ unsigned int GifOptionsDialog::getCompression() const
     const Magick::CompressionType ct = (Magick::CompressionType)varDat.toUInt( &ok );
 
     return ok ? ct : Magick::NoCompression;
+}
+
+void GifOptionsDialog::setImagesList( ImagesList pImages )
+{
+    ui->previewFrame->setImages( pImages );
 }

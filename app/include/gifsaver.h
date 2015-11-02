@@ -14,7 +14,7 @@ public:
     explicit LGSGifSaver(QObject *parent = 0);
     ~LGSGifSaver();
     
-    void save( const PixmapsList& imagesList, int delay ) const;
+    void save( const ImagesList& imagesList, int delay ) const;
 signals:
     void savingProgress( int steps, int step, const QString& msg ) const;
 

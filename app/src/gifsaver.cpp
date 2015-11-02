@@ -22,8 +22,9 @@ LGSGifSaver::~LGSGifSaver()
     delete mSaveDlg;
 }
 
-void LGSGifSaver::save( const PixmapsList& imagesList, int delay ) const
+void LGSGifSaver::save( const ImagesList& imagesList, int delay ) const
 {
+    mSaveDlg->setImagesList( imagesList );
     if( mSaveDlg->exec() != QDialog::Accepted )
         return;
 
@@ -37,19 +38,22 @@ void LGSGifSaver::save( const PixmapsList& imagesList, int delay ) const
         QVector<Magick::Image> frames;
         for( int i = 0; i < imagesList.size(); ++i )
         {
-            const QPixmapPtr pPixmap = imagesList.at( i );
             emit savingProgress( totalSteps, i, tr( "Composing GIF" ) );
-            QByteArray ba;
-            QBuffer buf( &ba );
-            buf.open( QIODevice::WriteOnly );
-            pPixmap->save( &buf, "PNG", 100 );
+            const ImageWrapperPtr pPixmap = imagesList.at( i );
+            if( pPixmap->getUsed() )
+            {
+                QByteArray ba;
+                QBuffer buf( &ba );
+                buf.open( QIODevice::WriteOnly );
+                pPixmap->img()->save( &buf, "PNG", 100 );
 
-            Magick::Image img( Magick::Blob( ba.data(), ba.size() ) );
-            img.compressType( compressionType );
-            img.quality( quality );
-            img.animationDelay( delay );
-            img.magick( "GIF" );
-            frames.append( img );
+                Magick::Image img( Magick::Blob( ba.data(), ba.size() ) );
+                img.compressType( compressionType );
+                img.quality( quality );
+                img.animationDelay( delay );
+                img.magick( "GIF" );
+                frames.append( img );
+            }
         }
 
         emit savingProgress( totalSteps, imagesList.size() + 1, tr( "Saving GIF" ) );

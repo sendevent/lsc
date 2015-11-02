@@ -26,19 +26,23 @@ SOURCES += src/main.cpp \
     src/gifsaver.cpp \
     src/capturer.cpp \
     src/mainwindow.cpp \
-    src/screenshotworker.cpp
+    src/screenshotworker.cpp \
+    src/gifframepreviewer.cpp \
+    src/imagewrapper.cpp
 
 HEADERS  += \
-    include/common.h \
     include/gifsaver.h \
     include/capturer.h \
     include/capturingareaplugin.h \
     include/mainwindow.h \
-    include/screenshotworker.h
+    include/screenshotworker.h \
+    include/gifframepreviewer.h \
+    include/imagewrapper.h
 
 FORMS    += \
     src/ui/displayselector.ui \
-    src/ui/mainwindow.ui
+    src/ui/mainwindow.ui \
+    src/ui/gifframepreviewer.ui
 
 RESOURCES += src/resources.qrc
 

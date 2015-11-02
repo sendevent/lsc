@@ -43,7 +43,7 @@ protected slots:
     void showSaveProgress( int steps, int step, const QString& msg = QString() );
     
 protected:
-    void resizeEvent ( QResizeEvent * event );
+    void resizeEvent( QResizeEvent * event );
 
     void makeScreenshots( int fps, int duration );
 
@@ -53,7 +53,7 @@ private:
     int mPrevMode;
     LSCCapturer *pGrabber;
     
-    QPixmapPtr mLastCapture;
+    ImageWrapperPtr mLastCapture;
     
     bool loadPlugins();
     bool populateMenu( const QObject *plugin );

@@ -2,6 +2,7 @@
 #define GIFOPTIONSDIALOG_H
 
 #include <QDialog>
+#include "imagewrapper.h"
 
 namespace Ui {
 class GifOptionsDialog;
@@ -18,6 +19,8 @@ public:
     int getQuality() const;
     QString getPath() const;
     unsigned int getCompression() const;
+
+    void setImagesList( ImagesList pImages );
 
 
 private slots:

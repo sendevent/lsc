@@ -50,12 +50,12 @@ LSCCapturer::~LSCCapturer()
 #endif //WITH_ANIMATED_GIF
 }
 
-QPixmapPtr LSCCapturer::getCapture()
+ImageWrapperPtr LSCCapturer::getCapture()
 {
     if( !images.isEmpty() )
         return images.last();
 
-    return QPixmapPtr();
+    return ImageWrapperPtr();
 }
 
 void LSCCapturer::setAreaSelector( const LSGCapturingAreaPlugin *areaSelector, int option )
@@ -80,7 +80,7 @@ void LSCCapturer::startGrab()
 
     images.clear();
 
-    const QPixmapPtr pImg = shotScreenSync();
+    const ImageWrapperPtr pImg = shotScreenSync();
     images.reserve( mFps*mDuration );
     if( workerPtr )
     {
@@ -108,15 +108,15 @@ void LSCCapturer::onCapturingFinished()
     emit finished();
 }
 
-QPixmapPtr LSCCapturer::shotScreenSync()
+ImageWrapperPtr LSCCapturer::shotScreenSync()
 {
-    QPixmapPtr img;
+    ImageWrapperPtr img;
     if( mAreaSelector )
     {
         if( mScreenRect.isEmpty() )
             mScreenRect = mAreaSelector->getArea( mSelectedAreaNum ).boundingRect();
 
-        img = QPixmapPtr( new QPixmap(
+        const QPixmap pm = QPixmap(
 #if QT_VERSION >= 0x050000
         QGuiApplication::primaryScreen()->grabWindow(
 #else
@@ -126,7 +126,9 @@ QPixmapPtr LSCCapturer::shotScreenSync()
                                   mScreenRect.x(),
                                   mScreenRect.y(),
                                   mScreenRect.width(),
-                                  mScreenRect.height() ) ) );
+                                  mScreenRect.height() )
+                        );
+        img = ImageWrapperPtr( new ImageWrapper( pm ) );
     }
     return img;
 }
@@ -158,11 +160,11 @@ void LSCCapturer::saveSeparatedFiles( const QString& path )
 
         emit savingProgress( images.size(), i, tr( "Saving %1" ).arg( name  ) );
 
-        const QPixmapPtr pPixmap = images.at( i );
+        const ImageWrapperPtr pPixmap = images.at( i );
 
         if( !pPixmap
                 || !f.open( QIODevice::WriteOnly )
-                || !pPixmap->save( &f, "PNG" ))
+                || !pPixmap->img()->save( &f, "PNG" ))
         {
             static const QString title( tr( "Save failed" ) );
             static const QString msgTmpl( tr( "Can't save file\n%1\n%2" ) );

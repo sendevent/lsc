@@ -11,7 +11,7 @@
 #include <QQueue>
 #include <QMutex>
 
-#include "common.h"
+#include "imagewrapper.h"
 #include "screenshotworker.h"
 
 class LGSGifSaver;
@@ -34,10 +34,10 @@ public:
 
     void setAreaSelector( const LSGCapturingAreaPlugin *mAreaSelector, int option = 0 );
 
-    QPixmapPtr getCapture();
+    ImageWrapperPtr getCapture();
 
 signals:
-    void captured( int count, const QPixmapPtr img );
+    void captured( int count, const ImageWrapperPtr img );
     void finished();
     void savingProgress( int steps, int step, const QString& msg );
     void startCapturing();
@@ -54,7 +54,7 @@ protected slots:
     void onCapturingFinished();
 
 protected:
-    PixmapsList images;
+    ImagesList images;
 
     int mFps, mCurrentCapturedNum;
     int mDuration;
@@ -70,7 +70,7 @@ protected:
 
     qint64 mLastTime;
 
-    QPixmapPtr shotScreenSync();
+    ImageWrapperPtr shotScreenSync();
     QThread workerThread;
     LSCWorker *workerPtr;
 };

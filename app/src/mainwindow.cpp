@@ -29,6 +29,7 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
   ,ui(new Ui::LSGMainWindow)
   ,mStartDelay( 0 )
   ,mPrevMode( 0 )
+  ,mLastCapture( 0 )
 {
     ui->setupUi(this);
 
@@ -64,7 +65,6 @@ LSGMainWindow::LSGMainWindow(QWidget *parent) :
     }
 
     pGrabber->setAreaSelector( plugins.at( 0 ) );
-    mLastCapture = QPixmapPtr( new QPixmap() );
 
     connect( pGrabber, SIGNAL(finished()),
              this, SLOT(finishCapturing()) );
@@ -135,7 +135,7 @@ void LSGMainWindow::startCapturing()
 
 void LSGMainWindow::finishCapturing()
 {
-    const QPixmapPtr pImg = pGrabber->getCapture();
+    const ImageWrapperPtr pImg = pGrabber->getCapture();
     if( pImg )
     {
         mLastCapture = pImg;
@@ -160,7 +160,8 @@ void LSGMainWindow::updatePreview()
 {
     if( mLastCapture && !mLastCapture.isNull() )
     {
-        ui->previewLabel->setPixmap( mLastCapture->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+        ui->previewLabel->setPixmap(
+                    mLastCapture->img()->scaled( ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
     }
 
     updateTotalFramesCountInfo();
@@ -214,7 +215,7 @@ void LSGMainWindow::updateTotalFramesCountInfo()
 {
     const quint64 imgCnt = ui->durationCombo->value() * ui->fpsSpinBox->value();
     const quint64 bytesCnt = mLastCapture
-            ? mLastCapture->toImage().byteCount() * imgCnt
+            ? mLastCapture->img()->toImage().byteCount() * imgCnt
             : 0;
 
     ui->totalCountLabel->setText( QString( "%1 [%2]" ).arg(  imgCnt ).arg( ::bytesToString(  bytesCnt ) )  );
@@ -259,10 +260,10 @@ void LSGMainWindow::saveSeria()
 
 void LSGMainWindow::saveCopy()
 {
-    if( mLastCapture && !mLastCapture->isNull() )
+    if( mLastCapture && !mLastCapture->img()->isNull() )
     {
         QClipboard *cpb = QApplication::clipboard();
-        cpb->setPixmap( *mLastCapture );
+        cpb->setPixmap( *mLastCapture->img() );
     }
 }
 
