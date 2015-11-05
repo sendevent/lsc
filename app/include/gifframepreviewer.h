@@ -8,6 +8,8 @@ namespace Ui {
 class GifFramePreviewer;
 }
 
+class ThumbsRow;
+
 class GifFramePreviewer : public QFrame
 {
     Q_OBJECT
@@ -20,9 +22,9 @@ public:
 
 private slots:
 
-    void on_btnPrev_clicked();
-    void on_btnRemove_clicked();
-    void on_btnNext_clicked();
+    void onPreviewSelected( const QPoint& pnt, int );
+
+    void test(int);
 
 protected:
 
@@ -34,9 +36,10 @@ private:
 
     int mCurrFrameNum;
 
+    ThumbsRow *pThumbsRow;
+
     ImageWrapperPtr currentFrame() const;
     void updateImage();
-    void updateAddRmBtnText();
 };
 
 #endif // GIFFRAMEPREVIEWER_H

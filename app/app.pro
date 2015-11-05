@@ -28,7 +28,9 @@ SOURCES += src/main.cpp \
     src/mainwindow.cpp \
     src/screenshotworker.cpp \
     src/gifframepreviewer.cpp \
-    src/imagewrapper.cpp
+    src/imagewrapper.cpp \
+    framepreview.cpp \
+    thumbsrow.cpp
 
 HEADERS  += \
     include/gifsaver.h \
@@ -37,12 +39,16 @@ HEADERS  += \
     include/mainwindow.h \
     include/screenshotworker.h \
     include/gifframepreviewer.h \
-    include/imagewrapper.h
+    include/imagewrapper.h \
+    framepreview.h \
+    thumbsrow.h
 
 FORMS    += \
     src/ui/displayselector.ui \
     src/ui/gifframepreviewer.ui \
-    src/ui/mainwindow.ui
+    src/ui/mainwindow.ui \
+    framepreview.ui \
+    thumbsrow.ui
 
 RESOURCES += src/resources.qrc
 
